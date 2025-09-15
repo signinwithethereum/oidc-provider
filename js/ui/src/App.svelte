@@ -139,12 +139,17 @@
 						alt="Client logo"
 					/>
 				{/if}
-				<p class="welcome-text-url">
+				<p class="welcome-text-name">
 					{client_metadata.client_name
 						? client_metadata.client_name
 						: domain}
 				</p>
 			</div>
+			{#if client_metadata.client_name}
+				<p class="welcome-text-domain">
+					{domain}
+				</p>
+			{/if}
 		</div>
 
 		<button
