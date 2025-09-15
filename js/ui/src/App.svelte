@@ -45,9 +45,10 @@
 	}
 	onMount(async () => {
 		try {
-			client_metadata = fetch(
+			const response = await fetch(
 				`${window.location.origin}/client/${client_id}`
-			).then(response => response.json())
+			)
+			client_metadata = await response.json()
 		} catch (e) {
 			console.error(e)
 		}
