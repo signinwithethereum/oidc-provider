@@ -172,10 +172,10 @@
 			<p class="siwe-button-text">Open your wallet</p>
 		</button>
 
-		{#if client_metadata.client_uri}
+		<!-- {#if client_metadata.client_uri}
 			<span class="request-linked-text"
 				>Request linked to {client_metadata.client_uri}</span
 			>
-		{/if}
+		{/if} -->
 	</div>
 </main>
