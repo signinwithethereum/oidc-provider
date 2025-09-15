@@ -59,15 +59,31 @@ body {
 	font-weight: 600;
 }
 
+.welcome-text-url-container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.client-page-logo {
+	width: 28px;
+	height: 28px;
+	margin-top: 4px;
+	border-radius: 4px;
+	margin-bottom: 4px;
+}
+
 .welcome-text {
-	font-size: 14px;
+	font-size: 15px;
 	font-weight: 400;
 	text-align: center;
 	margin-top: 8px;
 }
 
 .welcome-text-url {
-	font-size: 15px;
+	font-size: 16px;
 	font-weight: 600;
 	text-align: center;
 }
