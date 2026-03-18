@@ -25,7 +25,10 @@ async function buildJWKS(rsaPem: string) {
 }
 
 function parseCookieKeys(keys: string): string[] {
-  if (!keys) return ['default-insecure-key']
+  if (!keys) {
+    console.warn('NUXT_OIDC_COOKIE_KEYS not set — using insecure default. Set this in production.')
+    return ['default-insecure-key']
+  }
   return keys.split(',').map(k => k.trim()).filter(Boolean)
 }
 
