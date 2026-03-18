@@ -9,8 +9,8 @@ import { resolveEnsName, resolveEnsAvatar } from './ens'
 function parseAccountId(accountId: string): { chainId: number; address: Address } {
   const parts = accountId.split(':')
   return {
-    chainId: parseInt(parts[1], 10),
-    address: getAddress(parts[2]),
+    chainId: parseInt(parts[1]!, 10),
+    address: getAddress(parts[2]!),
   }
 }
 
