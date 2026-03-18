@@ -1,27 +1,46 @@
 import Provider from 'oidc-provider'
-import { exportJWK, importPKCS8, generateKeyPair } from 'jose'
+import { exportJWK, importPKCS8, importJWK, generateKeyPair } from 'jose'
+import Redis from 'ioredis'
 import { RedisAdapter } from './redis-adapter'
 import { findAccount } from './find-account'
 
 let provider: Provider | undefined
 
-async function buildJWKS(rsaPem: string) {
-  if (rsaPem) {
-    const privateKey = await importPKCS8(rsaPem, 'RS256')
-    const jwk = await exportJWK(privateKey)
-    jwk.kid = 'key1'
-    jwk.use = 'sig'
-    jwk.alg = 'RS256'
-    return { keys: [jwk] }
-  }
+const JWKS_REDIS_KEY = 'oidc:server:jwks'
 
-  // Auto-generate RSA key
-  const { privateKey } = await generateKeyPair('RS256', { extractable: true })
-  const jwk = await exportJWK(privateKey)
+function decorateJWK(jwk: Record<string, unknown>) {
   jwk.kid = 'key1'
   jwk.use = 'sig'
   jwk.alg = 'RS256'
-  return { keys: [jwk] }
+}
+
+async function buildJWKS(rsaPem: string, redisUrl: string) {
+  if (rsaPem) {
+    const privateKey = await importPKCS8(rsaPem, 'RS256')
+    const jwk = await exportJWK(privateKey)
+    decorateJWK(jwk)
+    return { keys: [jwk] }
+  }
+
+  // Auto-generate RSA key, shared across workers via Redis
+  const redis = new Redis(redisUrl)
+  try {
+    const existing = await redis.get(JWKS_REDIS_KEY)
+    if (existing) {
+      const jwk = JSON.parse(existing)
+      // Verify the stored key is still usable
+      await importJWK(jwk, 'RS256')
+      return { keys: [jwk] }
+    }
+
+    const { privateKey } = await generateKeyPair('RS256', { extractable: true })
+    const jwk = await exportJWK(privateKey)
+    decorateJWK(jwk)
+    await redis.set(JWKS_REDIS_KEY, JSON.stringify(jwk))
+    return { keys: [jwk] }
+  } finally {
+    redis.disconnect()
+  }
 }
 
 function parseCookieKeys(keys: string): string[] {
@@ -37,7 +56,7 @@ export async function getProvider(): Promise<Provider> {
 
   const { oidc } = useRuntimeConfig()
 
-  const jwks = await buildJWKS(oidc.rsaPem)
+  const jwks = await buildJWKS(oidc.rsaPem, oidc.redisUrl)
   const cookieKeys = parseCookieKeys(oidc.cookieKeys)
 
   provider = new Provider(oidc.baseUrl, {

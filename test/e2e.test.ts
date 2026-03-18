@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
+import { importJWK, jwtVerify } from "jose";
 
 // Test wallet — Hardhat/Anvil account #0
 const TEST_PRIVATE_KEY =
@@ -134,9 +135,12 @@ describe("siwe-oidc", () => {
       const detailsRes = await fetch(apiUrl(`/api/interaction/${uid}`), {
         headers: { cookie: cookies },
       });
+      expect(detailsRes.status).toBe(200);
       cookies = mergeCookies(cookies, extractCookies(detailsRes));
       const details = await detailsRes.json();
       expect(details.uid).toBe(uid);
+      expect(details.params.client_id).toBe(client.client_id);
+      expect(details.params.scope).toBe("openid profile");
 
       // 4. Create and sign SIWE message
       const message = createSiweMessage({
@@ -206,19 +210,128 @@ describe("siwe-oidc", () => {
       expect(tokens).toHaveProperty("id_token");
       expect(tokens.token_type).toBe("Bearer");
 
-      // 8. Verify id_token claims
-      const payloadB64 = tokens.id_token.split(".")[1]!;
-      const claims = JSON.parse(
-        Buffer.from(payloadB64, "base64url").toString(),
-      );
+      // 8. Verify id_token signature against the JWKS and check claims
+      const jwksData = await fetch(apiUrl("/jwks")).then((r) => r.json());
+      const pubKey = await importJWK(jwksData.keys[0], "RS256");
+      const { payload: claims } = await jwtVerify(tokens.id_token, pubKey, {
+        issuer: BASE,
+        audience: client.client_id,
+      });
       expect(claims.sub).toMatch(/^eip155:1:0x/);
       expect(claims.sub).toContain(account.address);
+      expect(claims.exp).toBeGreaterThan(Math.floor(Date.now() / 1000));
+      expect(claims.iat).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
 
       // 9. Verify userinfo endpoint
-      const userinfo = await fetch(apiUrl("/me"), {
+      const userinfoRes = await fetch(apiUrl("/me"), {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
-      }).then((r) => r.json());
+      });
+      expect(userinfoRes.status).toBe(200);
+      const userinfo = await userinfoRes.json();
       expect(userinfo.sub).toBe(claims.sub);
+      expect(userinfo.preferred_username).toBe(account.address);
+    });
+  });
+
+  describe("rejection cases", () => {
+    /** Set up an interaction and return the uid + cookies. */
+    async function startInteraction() {
+      const client = await fetch(apiUrl("/reg"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          redirect_uris: ["https://example.com/callback"],
+          token_endpoint_auth_method: "none",
+        }),
+      }).then((r) => r.json());
+
+      const authUrl = new URL("/auth", BASE);
+      authUrl.searchParams.set("client_id", client.client_id);
+      authUrl.searchParams.set("redirect_uri", "https://example.com/callback");
+      authUrl.searchParams.set("response_type", "code");
+      authUrl.searchParams.set("scope", "openid");
+
+      const authRes = await fetch(authUrl, { redirect: "manual" });
+      const interactionUrl = authRes.headers.get("location")!;
+      let cookies = extractCookies(authRes);
+      const uid = interactionUrl.split("/interaction/")[1]!.split("?")[0]!;
+
+      const detailsRes = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        headers: { cookie: cookies },
+      });
+      cookies = mergeCookies(cookies, extractCookies(detailsRes));
+      return { uid, cookies };
+    }
+
+    it("rejects missing message or signature", async () => {
+      const { uid, cookies } = await startInteraction();
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie: cookies },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.statusMessage).toMatch(/Missing message or signature/);
+    });
+
+    it("rejects wrong nonce", async () => {
+      const { uid, cookies } = await startInteraction();
+
+      const message = createSiweMessage({
+        domain: new URL(BASE).host,
+        address: account.address,
+        uri: BASE,
+        chainId: 1,
+        nonce: "totally-wrong-nonce",
+      });
+      const signature = await account.signMessage({ message });
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie: cookies },
+        body: JSON.stringify({ message, signature }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.statusMessage).toMatch(/Nonce mismatch/);
+    });
+
+    it("rejects invalid signature", async () => {
+      const { uid, cookies } = await startInteraction();
+
+      const message = createSiweMessage({
+        domain: new URL(BASE).host,
+        address: account.address,
+        uri: BASE,
+        chainId: 1,
+        nonce: uid,
+      });
+      const badSig =
+        "0x" + "ab".repeat(65); // garbage 65-byte signature
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie: cookies },
+        body: JSON.stringify({ message, signature: badSig }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.statusMessage).toMatch(/Invalid SIWE signature/);
+    });
+
+    it("rejects interaction without cookies", async () => {
+      const { uid } = await startInteraction();
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "x", signature: "0x" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.statusMessage).toMatch(/Invalid interaction session/);
     });
   });
 });
