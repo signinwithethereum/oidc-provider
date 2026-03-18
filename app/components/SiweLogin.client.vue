@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import { useConnection, useDisconnect, useSignMessage } from '@wagmi/vue'
 import { createSiweMessage } from '@1001-digital/components.evm'
 
@@ -108,25 +107,31 @@ watch([isConnected, address], ([connected, addr]) => {
     />
 
     <template v-else-if="isConnected && status === 'error'">
-      <p class="error">{{ errorMessage }}</p>
-      <button class="btn danger" @click="signIn">Try again</button>
-      <hr />
+      <Alert type="error">
+        <p>{{ errorMessage }}</p>
+      </Alert>
+      <Button
+        class="danger block"
+        @click="signIn"
+      >
+        Try again
+      </Button>
     </template>
 
     <template v-if="isConnected && address">
-      <button
+      <Button
         v-if="status === 'idle'"
-        class="btn primary"
+        class="primary block"
         @click="signIn"
       >
         Sign in with Ethereum
-      </button>
-      <button
-        class="btn tertiary"
+      </Button>
+      <Button
+        class="tertiary block"
         @click="disconnect()"
       >
         Switch wallet (<EvmAccount :address="address" class="siwe-address" />)
-      </button>
+      </Button>
     </template>
 
     <EvmConnect
@@ -142,43 +147,12 @@ watch([isConnected, address], ([connected, addr]) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100%;
-  gap: var(--spacer, 1rem);
-  padding: var(--spacer, 1rem);
+  min-block-size: 100%;
+  gap: var(--spacer);
+  padding: var(--spacer);
 
   > * {
-    width: 100%;
+    inline-size: 100%;
   }
-
-  .error {
-    color: var(--error, #e53e3e);
-    text-align: center;
-  }
-}
-
-.btn {
-  display: block;
-  width: 100%;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.btn.primary {
-  background: var(--accent, #00eaf2);
-  color: #000;
-}
-
-.btn.danger {
-  background: var(--error, #e53e3e);
-  color: #fff;
-}
-
-.btn.tertiary {
-  background: transparent;
-  border: 1px solid var(--border, #ccc);
-  color: inherit;
 }
 </style>
