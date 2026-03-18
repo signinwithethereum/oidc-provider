@@ -7,6 +7,8 @@ services:
       - NUXT_OIDC_BASE_URL=http://localhost:3000
       - NUXT_OIDC_REDIS_URL=redis://redis:6379
       - NUXT_OIDC_REQUIRE_SECRET=false
+      - NUXT_PUBLIC_EVM_WALLET_CONNECT_PROJECT_ID=${NUXT_PUBLIC_EVM_WALLET_CONNECT_PROJECT_ID}
+      - NUXT_PUBLIC_EVM_CHAINS_MAINNET_RPCS=${NUXT_PUBLIC_EVM_CHAINS_MAINNET_RPCS}
     depends_on:
       redis:
         condition: service_healthy
