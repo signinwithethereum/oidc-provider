@@ -1,6 +1,6 @@
 import { getProvider } from '../../utils/provider'
 import { getAddress } from 'viem'
-import { parseSiweMessage, validateSiweMessage } from 'viem/siwe'
+import { parseSiweMessage } from 'viem/siwe'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 
@@ -21,7 +21,8 @@ export default defineEventHandler(async (event) => {
   let details
   try {
     details = await provider.interactionDetails(req, res)
-  } catch {
+  } catch (e) {
+    console.error('interactionDetails failed:', e)
     throw createError({
       statusCode: 400,
       statusMessage: 'Invalid interaction session',
@@ -30,6 +31,13 @@ export default defineEventHandler(async (event) => {
 
   // Parse the SIWE message
   const siweMessage = parseSiweMessage(message)
+
+  if (!siweMessage.address) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'SIWE message missing address',
+    })
+  }
 
   // Validate nonce matches the interaction uid
   if (siweMessage.nonce !== details.uid) {
@@ -40,9 +48,10 @@ export default defineEventHandler(async (event) => {
   }
 
   // Verify the SIWE signature (supports EOA + EIP-1271 smart wallets)
+  const { oidc } = useRuntimeConfig()
   const client = createPublicClient({
     chain: mainnet,
-    transport: http(),
+    transport: http(oidc.ethProvider || undefined),
   })
 
   const valid = await client.verifySiweMessage({
@@ -57,20 +66,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Validate SIWE message fields
-  const isValid = validateSiweMessage({
-    message: siweMessage,
-  })
-
-  if (!isValid) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid SIWE message',
-    })
-  }
-
   // Build account ID: eip155:{chainId}:{checksumAddress}
-  const checksumAddress = getAddress(siweMessage.address!)
+  const checksumAddress = getAddress(siweMessage.address)
   const chainId = siweMessage.chainId || 1
   const accountId = `eip155:${chainId}:${checksumAddress}`
 
@@ -78,6 +75,4 @@ export default defineEventHandler(async (event) => {
   await provider.interactionFinished(req, res, {
     login: { accountId },
   })
-
-  // Do not return anything — the provider has already written the response
 })

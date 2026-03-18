@@ -1,12 +1,20 @@
-import { createPublicClient, http, type Address } from 'viem'
+import { createPublicClient, http, type Address, type PublicClient } from 'viem'
 import { mainnet } from 'viem/chains'
 import { normalize } from 'viem/ens'
 
-function getPublicClient(ethProviderUrl?: string) {
-  return createPublicClient({
+let cachedClient: PublicClient | undefined
+let cachedUrl: string | undefined
+
+function getPublicClient(ethProviderUrl?: string): PublicClient {
+  if (cachedClient && cachedUrl === ethProviderUrl) return cachedClient
+
+  cachedClient = createPublicClient({
     chain: mainnet,
     transport: http(ethProviderUrl || undefined),
   })
+  cachedUrl = ethProviderUrl
+
+  return cachedClient
 }
 
 export async function resolveEnsName(
