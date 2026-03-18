@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
       },
     }
   } catch (e) {
+    console.error('interactionDetails failed:', e)
     throw createError({
       statusCode: 400,
       statusMessage: 'Invalid interaction session',
