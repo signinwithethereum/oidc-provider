@@ -16,7 +16,7 @@ async function buildJWKS(rsaPem: string) {
   }
 
   // Auto-generate RSA key
-  const { privateKey } = await generateKeyPair('RS256')
+  const { privateKey } = await generateKeyPair('RS256', { extractable: true })
   const jwk = await exportJWK(privateKey)
   jwk.kid = 'key1'
   jwk.use = 'sig'
@@ -47,6 +47,17 @@ export async function getProvider(): Promise<Provider> {
 
     cookies: {
       keys: cookieKeys,
+    },
+
+    // Auto-approve grants — SIWE signature IS the user's consent
+    async loadExistingGrant(ctx) {
+      const grant = new ctx.oidc.provider.Grant({
+        clientId: ctx.oidc.client!.clientId,
+        accountId: ctx.oidc.session!.accountId,
+      })
+      grant.addOIDCScope(ctx.oidc.params!.scope as string)
+      await grant.save()
+      return grant
     },
 
     claims: {

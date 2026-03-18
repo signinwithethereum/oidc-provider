@@ -7,6 +7,7 @@ const OIDC_PATHS = [
   '/auth',
   '/token',
   '/userinfo',
+  '/me',
   '/jwks',
   '/reg',
   '/introspection',
