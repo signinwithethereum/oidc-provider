@@ -12,6 +12,6 @@ ENV HOST=0.0.0.0
 ENV PORT=3000
 EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]
-LABEL org.opencontainers.image.source https://github.com/signinwithethereum/siwe-oidc
-LABEL org.opencontainers.image.description "OpenID Connect Identity Provider for Sign-In with Ethereum"
-LABEL org.opencontainers.image.licenses "MIT OR Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/signinwithethereum/siwe-oidc"
+LABEL org.opencontainers.image.description="OpenID Connect Identity Provider for Sign-In with Ethereum"
+LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"
