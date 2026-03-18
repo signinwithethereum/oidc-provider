@@ -76,3 +76,9 @@ public/*.js
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Nuxt
+.nuxt/
+.output/
+.data/
+.nitro/

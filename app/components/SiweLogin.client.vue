@@ -1,0 +1,202 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import { useConnection, useDisconnect, useSignMessage } from '@wagmi/vue'
+import { createSiweMessage } from '@1001-digital/components.evm'
+
+const props = defineProps<{
+  uid: string
+  clientId?: string
+}>()
+
+const emit = defineEmits<{
+  error: [message: string]
+}>()
+
+type Status = 'idle' | 'signing' | 'verifying' | 'error'
+
+const status = ref<Status>('idle')
+const errorMessage = ref('')
+
+const { address, chainId, isConnected, connector } = useConnection()
+const { mutateAsync: signMessageAsync } = useSignMessage()
+const { mutate: disconnectAccount } = useDisconnect()
+
+const userInitiated = ref(false)
+
+function disconnect() {
+  status.value = 'idle'
+  errorMessage.value = ''
+  disconnectAccount()
+}
+
+async function signIn() {
+  if (!address.value || !chainId.value) return
+
+  status.value = 'signing'
+  errorMessage.value = ''
+
+  try {
+    const message = createSiweMessage({
+      domain: window.location.host,
+      address: address.value,
+      uri: window.location.origin,
+      chainId: chainId.value,
+      nonce: props.uid,
+      statement: 'Sign-In with Ethereum',
+    })
+
+    const signature = await signMessageAsync({ message })
+
+    status.value = 'verifying'
+
+    const response = await fetch(`/api/interaction/${props.uid}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, signature }),
+      redirect: 'manual',
+    })
+
+    // The server responds with a 302 redirect
+    if (response.type === 'opaqueredirect' || response.status === 302) {
+      const location = response.headers.get('location')
+      if (location) {
+        window.location.href = location
+        return
+      }
+    }
+
+    // If redirect: 'manual' produced an opaque response, follow via re-fetch
+    if (response.type === 'opaqueredirect') {
+      // Re-submit allowing redirect to follow
+      const followResponse = await fetch(`/api/interaction/${props.uid}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, signature }),
+      })
+      if (followResponse.redirected) {
+        window.location.href = followResponse.url
+        return
+      }
+    }
+
+    // Handle error responses
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ statusMessage: 'Verification failed' }))
+      throw new Error(error.statusMessage || 'Verification failed')
+    }
+  } catch (err: unknown) {
+    status.value = 'error'
+    if (err instanceof Error) {
+      if (/reject|denied|cancel/i.test(err.message)) {
+        errorMessage.value = 'Signature rejected. Please try again.'
+      } else {
+        errorMessage.value = err.message
+      }
+    } else {
+      errorMessage.value = 'An unknown error occurred.'
+    }
+    emit('error', errorMessage.value)
+  }
+}
+
+// Auto-sign when user actively connects via EvmConnect
+watch([isConnected, address], ([connected, addr]) => {
+  if (connected && addr && status.value === 'idle' && userInitiated.value) {
+    signIn()
+  }
+})
+</script>
+
+<template>
+  <div class="siwe-login">
+    <Loading
+      v-if="status === 'signing'"
+      spinner
+      stacked
+      :txt="connector?.name
+        ? `Requesting signature from ${connector.name}...`
+        : 'Requesting signature...'"
+    />
+
+    <Loading
+      v-else-if="status === 'verifying'"
+      spinner
+      stacked
+      txt="Verifying signature..."
+    />
+
+    <template v-else-if="isConnected && status === 'error'">
+      <p class="error">{{ errorMessage }}</p>
+      <button class="btn danger" @click="signIn">Try again</button>
+      <hr />
+    </template>
+
+    <template v-if="isConnected && address">
+      <button
+        v-if="status === 'idle'"
+        class="btn primary"
+        @click="signIn"
+      >
+        Sign in with Ethereum
+      </button>
+      <button
+        class="btn tertiary"
+        @click="disconnect()"
+      >
+        Switch wallet (<EvmAccount :address="address" class="siwe-address" />)
+      </button>
+    </template>
+
+    <EvmConnect
+      v-else-if="status !== 'verifying'"
+      @connecting="userInitiated = true"
+    />
+  </div>
+</template>
+
+<style scoped>
+.siwe-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  gap: var(--spacer, 1rem);
+  padding: var(--spacer, 1rem);
+
+  > * {
+    width: 100%;
+  }
+
+  .error {
+    color: var(--error, #e53e3e);
+    text-align: center;
+  }
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--accent, #00eaf2);
+  color: #000;
+}
+
+.btn.danger {
+  background: var(--error, #e53e3e);
+  color: #fff;
+}
+
+.btn.tertiary {
+  background: transparent;
+  border: 1px solid var(--border, #ccc);
+  color: inherit;
+}
+</style>
