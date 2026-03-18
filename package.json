@@ -7,6 +7,7 @@
     "build": "nuxt build",
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
+    "test": "vitest run",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
@@ -17,9 +18,12 @@
     "viem": "^2.31.3"
   },
   "devDependencies": {
+    "@nuxt/test-utils": "^4.0.0",
     "@types/luxon": "^3.7.1",
     "@types/oidc-provider": "^9.5.0",
+    "@vue/test-utils": "^2.4.6",
     "nuxt": "^3.17.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.0"
   }
 }

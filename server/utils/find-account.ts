@@ -6,7 +6,7 @@ import { resolveEnsName, resolveEnsAvatar } from './ens'
 /**
  * Account ID format: eip155:{chainId}:{checksumAddress}
  */
-function parseAccountId(accountId: string): { chainId: number; address: Address } {
+export function parseAccountId(accountId: string): { chainId: number; address: Address } {
   const parts = accountId.split(':')
   return {
     chainId: parseInt(parts[1]!, 10),
