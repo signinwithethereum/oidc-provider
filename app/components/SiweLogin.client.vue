@@ -53,30 +53,12 @@ async function signIn() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, signature }),
-      redirect: 'manual',
     })
 
-    // The server responds with a 302 redirect
-    if (response.type === 'opaqueredirect' || response.status === 302) {
-      const location = response.headers.get('location')
-      if (location) {
-        window.location.href = location
-        return
-      }
-    }
-
-    // If redirect: 'manual' produced an opaque response, follow via re-fetch
-    if (response.type === 'opaqueredirect') {
-      // Re-submit allowing redirect to follow
-      const followResponse = await fetch(`/api/interaction/${props.uid}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, signature }),
-      })
-      if (followResponse.redirected) {
-        window.location.href = followResponse.url
-        return
-      }
+    // The server responds with a 302 that fetch follows automatically
+    if (response.redirected) {
+      window.location.href = response.url
+      return
     }
 
     // Handle error responses
