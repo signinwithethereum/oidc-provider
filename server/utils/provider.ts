@@ -83,6 +83,7 @@ export async function getProvider(): Promise<Provider> {
 
     cookies: {
       keys: cookieKeys,
+      short: { path: '/' },
     },
 
     // Auto-approve grants — SIWE signature IS the user's consent
