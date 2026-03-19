@@ -154,7 +154,6 @@ watch([isConnected, address], ([connected, addr]) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-block-size: 100%;
   gap: var(--spacer);
   padding: var(--spacer);
 
