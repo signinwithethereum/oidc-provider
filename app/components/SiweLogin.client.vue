@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// import { useConnection, useDisconnect, useSignMessage } from '@wagmi/vue'
 import { createSiweMessage } from '@1001-digital/components.evm'
 
 const props = defineProps<{
