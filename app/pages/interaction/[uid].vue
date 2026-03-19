@@ -14,6 +14,7 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
       :closable="false"
       :click-outside="false"
       :title="error ? error.data?.message || 'Session Expired' : undefined"
+      compat
     >
       <template v-if="error">
         <p class="muted">
