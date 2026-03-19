@@ -10,6 +10,19 @@ const account = privateKeyToAccount(TEST_PRIVATE_KEY)
 // Expects a running server + Redis: `npm run dev`
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000'
 
+const serverAvailable = await fetch(BASE, {
+  signal: AbortSignal.timeout(2000),
+})
+  .then(() => true)
+  .catch(() => false)
+
+if (!serverAvailable) {
+  console.warn(
+    '\n⚠  Skipping e2e tests — local server is not running.\n' +
+      '   Start it with: pnpm dev\n',
+  )
+}
+
 function apiUrl(path: string): string {
   return path.startsWith('http') ? path : `${BASE}${path}`
 }
@@ -58,7 +71,7 @@ function mergeCookies(...parts: string[]): string {
   return [...map.values()].join('; ')
 }
 
-describe('siwe-oidc', () => {
+describe.skipIf(!serverAvailable)('siwe-oidc', () => {
   describe('discovery', () => {
     it('serves OpenID configuration', async () => {
       const res = await fetch(apiUrl('/.well-known/openid-configuration'))
