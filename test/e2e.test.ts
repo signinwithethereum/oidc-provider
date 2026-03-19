@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { randomBytes, createHash } from 'node:crypto'
 import { privateKeyToAccount } from 'viem/accounts'
 import { importJWK, jwtVerify } from 'jose'
 
@@ -56,6 +57,13 @@ function createSiweMessage(params: {
   return lines.join('\n')
 }
 
+/** Generate a PKCE code_verifier and S256 code_challenge. */
+function generatePkce() {
+  const verifier = randomBytes(32).toString('base64url')
+  const challenge = createHash('sha256').update(verifier).digest('base64url')
+  return { verifier, challenge }
+}
+
 /** Collect Set-Cookie headers as a semicolon-joined string. */
 function extractCookies(res: Response): string {
   return res.headers
@@ -77,7 +85,7 @@ function mergeCookies(...parts: string[]): string {
 }
 
 describe.skipIf(!serverAvailable)('siwe-oidc', () => {
-  /** Register a client, start an auth flow, and return the uid + cookies + clientId. */
+  /** Register a client, start an auth flow, and return the uid + cookies + clientId + PKCE verifier. */
   async function startInteraction() {
     const client = await fetch(apiUrl('/reg'), {
       method: 'POST',
@@ -88,11 +96,14 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       }),
     }).then((r) => r.json())
 
+    const pkce = generatePkce()
     const authUrl = new URL('/auth', BASE)
     authUrl.searchParams.set('client_id', client.client_id)
     authUrl.searchParams.set('redirect_uri', 'https://example.com/callback')
     authUrl.searchParams.set('response_type', 'code')
     authUrl.searchParams.set('scope', 'openid profile')
+    authUrl.searchParams.set('code_challenge', pkce.challenge)
+    authUrl.searchParams.set('code_challenge_method', 'S256')
 
     const authRes = await fetch(authUrl, { redirect: 'manual' })
     const interactionUrl = authRes.headers.get('location')!
@@ -103,12 +114,12 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       headers: { cookie: cookies },
     })
     cookies = mergeCookies(cookies, extractCookies(detailsRes))
-    return { uid, cookies, clientId: client.client_id as string }
+    return { uid, cookies, clientId: client.client_id as string, codeVerifier: pkce.verifier }
   }
 
   /** Run the full SIWE auth flow and return tokens + the authorization code. */
   async function completeAuthFlow() {
-    const { uid, cookies, clientId } = await startInteraction()
+    const { uid, cookies, clientId, codeVerifier } = await startInteraction()
 
     const message = createSiweMessage({
       domain: new URL(BASE).host,
@@ -151,6 +162,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         code,
         redirect_uri: 'https://example.com/callback',
         client_id: clientId,
+        code_verifier: codeVerifier,
       }),
     })
     const tokens = await tokenRes.json()
@@ -160,6 +172,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       idToken: tokens.id_token as string,
       clientId,
       code,
+      codeVerifier,
     }
   }
 
@@ -220,12 +233,15 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       }).then((r) => r.json())
 
       // 2. Start auth flow — provider 303s to /interaction/{uid}
+      const pkce = generatePkce()
       const authUrl = new URL('/auth', BASE)
       authUrl.searchParams.set('client_id', client.client_id)
       authUrl.searchParams.set('redirect_uri', 'https://example.com/callback')
       authUrl.searchParams.set('response_type', 'code')
       authUrl.searchParams.set('scope', 'openid profile')
       authUrl.searchParams.set('state', 'teststate')
+      authUrl.searchParams.set('code_challenge', pkce.challenge)
+      authUrl.searchParams.set('code_challenge_method', 'S256')
 
       const authRes = await fetch(authUrl, { redirect: 'manual' })
       expect(authRes.status).toBe(303)
@@ -307,6 +323,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
           code: code!,
           redirect_uri: 'https://example.com/callback',
           client_id: client.client_id,
+          code_verifier: pkce.verifier,
         }),
       })
       expect(tokenRes.status).toBe(200)

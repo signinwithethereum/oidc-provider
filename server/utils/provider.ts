@@ -135,10 +135,6 @@ export async function getProvider(): Promise<Provider> {
       IdToken: 3600,
     },
 
-    pkce: {
-      required: () => false,
-    },
-
     clientDefaults: {
       grant_types: ['authorization_code'],
       response_types: ['code'],
