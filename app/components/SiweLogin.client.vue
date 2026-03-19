@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useConnection, useDisconnect, useSignMessage } from '@wagmi/vue'
+// import { useConnection, useDisconnect, useSignMessage } from '@wagmi/vue'
 import { createSiweMessage } from '@1001-digital/components.evm'
 
 const props = defineProps<{
@@ -62,7 +62,9 @@ async function signIn() {
 
     // Handle error responses
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ statusMessage: 'Verification failed' }))
+      const error = await response
+        .json()
+        .catch(() => ({ statusMessage: 'Verification failed' }))
       throw new Error(error.statusMessage || 'Verification failed')
     }
   } catch (err: unknown) {
@@ -94,9 +96,11 @@ watch([isConnected, address], ([connected, addr]) => {
       v-if="status === 'signing'"
       spinner
       stacked
-      :txt="connector?.name
-        ? `Requesting signature from ${connector.name}...`
-        : 'Requesting signature...'"
+      :txt="
+        connector?.name
+          ? `Requesting signature from ${connector.name}...`
+          : 'Requesting signature...'
+      "
     />
 
     <Loading
@@ -130,7 +134,10 @@ watch([isConnected, address], ([connected, addr]) => {
         class="tertiary block"
         @click="disconnect()"
       >
-        Switch wallet (<EvmAccount :address="address" class="siwe-address" />)
+        Switch wallet (<EvmAccount
+          :address="address"
+          class="siwe-address"
+        />)
       </Button>
     </template>
 
