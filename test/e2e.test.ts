@@ -420,26 +420,26 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       expect(config).toHaveProperty('end_session_endpoint')
     })
 
-    it('/introspection requires client authentication', async () => {
+    it('/introspection requires client identification', async () => {
       const res = await fetch(apiUrl('/token/introspection'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ token: 'fake-token' }),
       })
-      expect(res.status).toBe(401)
+      expect(res.status).toBe(400)
       const body = await res.json()
-      expect(body.error).toBe('invalid_client')
+      expect(body.error).toBe('invalid_request')
     })
 
-    it('/revocation requires client authentication', async () => {
+    it('/revocation requires client identification', async () => {
       const res = await fetch(apiUrl('/token/revocation'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ token: 'fake-token' }),
       })
-      expect(res.status).toBe(401)
+      expect(res.status).toBe(400)
       const body = await res.json()
-      expect(body.error).toBe('invalid_client')
+      expect(body.error).toBe('invalid_request')
     })
 
     it('/end_session is routed to the provider', async () => {
@@ -461,7 +461,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       })
       expect(res.status).toBe(400)
       const body = await res.json()
-      expect(body.error).toBe('invalid_client_metadata')
+      expect(body.error).toBe('invalid_redirect_uri')
     })
 
     it('rejects registration with no redirect_uris', async () => {

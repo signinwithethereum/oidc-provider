@@ -1,4 +1,4 @@
-import Provider from 'oidc-provider'
+import Provider, { errors } from 'oidc-provider'
 import {
   exportJWK,
   importPKCS8,
@@ -108,12 +108,12 @@ export async function getProvider(): Promise<Provider> {
     },
 
     extraClientMetadata: {
-      properties: [],
-      validator(_ctx, key, value) {
-        if (key === 'redirect_uris') {
-          for (const uri of value as string[]) {
+      properties: ['_redirect_uri_policy'],
+      validator(_ctx, _key, _value, metadata) {
+        if (metadata.redirect_uris) {
+          for (const uri of metadata.redirect_uris as string[]) {
             if (new URL(uri).protocol !== 'https:') {
-              throw new Provider.errors.InvalidClientMetadata(
+              throw new errors.InvalidClientMetadata(
                 'redirect_uris must use the https scheme',
               )
             }
