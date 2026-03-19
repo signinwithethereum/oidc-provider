@@ -64,7 +64,24 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify the SIWE signature (supports EOA + EIP-1271 smart wallets)
+  // Validate the first Resources entry matches the OIDC redirect_uri
+  const redirectUri = details.params.redirect_uri as string | undefined
+  const resourcesMatch = message.match(/^Resources:\n- (.+)$/m)
+  const firstResource = resourcesMatch?.[1]
+  if (!firstResource) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Missing resource in SIWE message',
+    })
+  }
+  if (firstResource !== redirectUri) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'SIWE resource does not match redirect_uri',
+    })
+  }
+
+  // Verify the SIWE signature + domain binding against the provider's issuer
   const { oidc } = useRuntimeConfig()
   const client = createPublicClient({
     chain: mainnet,
@@ -74,6 +91,7 @@ export default defineEventHandler(async (event) => {
   const valid = await client.verifySiweMessage({
     message,
     signature,
+    domain: new URL(oidc.baseUrl).host,
   })
 
   if (!valid) {
