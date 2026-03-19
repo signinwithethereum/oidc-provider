@@ -116,12 +116,12 @@ export async function getProvider(): Promise<Provider> {
     },
 
     ttl: {
-      AuthorizationCode: 30,
-      Session: 300,
-      Interaction: 300,
-      Grant: 300,
-      AccessToken: 30,
-      IdToken: 60,
+      AuthorizationCode: 60,
+      Session: 86_400,
+      Interaction: 600,
+      Grant: 86_400,
+      AccessToken: 3600,
+      IdToken: 3600,
     },
 
     pkce: {
