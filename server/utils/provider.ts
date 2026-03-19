@@ -112,7 +112,8 @@ export async function getProvider(): Promise<Provider> {
       validator(_ctx, _key, _value, metadata) {
         if (metadata.redirect_uris) {
           for (const uri of metadata.redirect_uris as string[]) {
-            if (new URL(uri).protocol !== 'https:') {
+            const parsed = new URL(uri)
+            if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost') {
               throw new errors.InvalidClientMetadata(
                 'redirect_uris must use the https scheme',
               )
