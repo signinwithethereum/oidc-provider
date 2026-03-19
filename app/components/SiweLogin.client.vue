@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createSiweMessage } from '@1001-digital/components.evm'
+import { useSiwe } from '@1001-digital/components.evm'
 
 const props = defineProps<{
   uid: string
@@ -10,81 +10,53 @@ const emit = defineEmits<{
   error: [message: string]
 }>()
 
-type Status = 'idle' | 'signing' | 'verifying' | 'error'
-
-const status = ref<Status>('idle')
-const errorMessage = ref('')
+const { step, statusText, errorMessage, signIn, reset } = useSiwe()
 
 const { address, chainId, isConnected, connector } = useConnection()
-const { mutateAsync: signMessageAsync } = useSignMessage()
 const { mutate: disconnectAccount } = useDisconnect()
 
 const userInitiated = ref(false)
 
 function disconnect() {
-  status.value = 'idle'
-  errorMessage.value = ''
+  reset()
   disconnectAccount()
 }
 
-async function signIn() {
-  if (!address.value || !chainId.value) return
+async function handleSignIn() {
+  const result = await signIn({
+    getNonce: async () => props.uid,
+    statement: 'Sign-In with Ethereum',
+    async verify(message, signature) {
+      const response = await fetch(`/api/interaction/${props.uid}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, signature }),
+      })
 
-  status.value = 'signing'
-  errorMessage.value = ''
-
-  try {
-    const message = createSiweMessage({
-      domain: window.location.host,
-      address: address.value,
-      uri: window.location.origin,
-      chainId: chainId.value,
-      nonce: props.uid,
-      statement: 'Sign-In with Ethereum',
-    })
-
-    const signature = await signMessageAsync({ message })
-
-    status.value = 'verifying'
-
-    const response = await fetch(`/api/interaction/${props.uid}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, signature }),
-    })
-
-    // The server responds with a 302 that fetch follows automatically
-    if (response.redirected) {
-      window.location.href = response.url
-      return
-    }
-
-    // Handle error responses
-    if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ statusMessage: 'Verification failed' }))
-      throw new Error(error.statusMessage || 'Verification failed')
-    }
-  } catch (err: unknown) {
-    status.value = 'error'
-    if (err instanceof Error) {
-      if (/reject|denied|cancel/i.test(err.message)) {
-        errorMessage.value = 'Signature rejected. Please try again.'
-      } else {
-        errorMessage.value = err.message
+      if (response.redirected) {
+        window.location.href = response.url
+        // Keep the composable in 'verifying' state while navigating
+        return
       }
-    } else {
-      errorMessage.value = 'An unknown error occurred.'
-    }
+
+      if (!response.ok) {
+        const error = await response
+          .json()
+          .catch(() => ({ statusMessage: 'Verification failed' }))
+        throw new Error(error.statusMessage || 'Verification failed')
+      }
+    },
+  })
+
+  if (!result) {
     emit('error', errorMessage.value)
   }
 }
 
 // Auto-sign when user actively connects via EvmConnect
 watch([isConnected, address], ([connected, addr]) => {
-  if (connected && addr && status.value === 'idle' && userInitiated.value) {
-    signIn()
+  if (connected && addr && step.value === 'idle' && userInitiated.value) {
+    handleSignIn()
   }
 })
 </script>
@@ -92,30 +64,19 @@ watch([isConnected, address], ([connected, addr]) => {
 <template>
   <div class="siwe-login">
     <Loading
-      v-if="status === 'signing'"
+      v-if="step === 'signing' || step === 'verifying'"
       spinner
       stacked
-      :txt="
-        connector?.name
-          ? `Requesting signature from ${connector.name}...`
-          : 'Requesting signature...'
-      "
+      :txt="statusText"
     />
 
-    <Loading
-      v-else-if="status === 'verifying'"
-      spinner
-      stacked
-      txt="Verifying signature..."
-    />
-
-    <template v-else-if="isConnected && status === 'error'">
+    <template v-else-if="isConnected && step === 'error'">
       <Alert type="error">
         <p>{{ errorMessage }}</p>
       </Alert>
       <Button
         class="danger block"
-        @click="signIn"
+        @click="handleSignIn"
       >
         Try again
       </Button>
@@ -123,9 +84,9 @@ watch([isConnected, address], ([connected, addr]) => {
 
     <template v-if="isConnected && address">
       <Button
-        v-if="status === 'idle'"
+        v-if="step === 'idle'"
         class="primary block"
-        @click="signIn"
+        @click="handleSignIn"
       >
         Sign in with Ethereum
       </Button>
@@ -141,7 +102,7 @@ watch([isConnected, address], ([connected, addr]) => {
     </template>
 
     <EvmConnect
-      v-else-if="status !== 'verifying'"
+      v-else-if="step !== 'verifying'"
       @connecting="userInitiated = true"
     />
   </div>
