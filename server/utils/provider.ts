@@ -1,5 +1,5 @@
 import Provider from 'oidc-provider'
-import { exportJWK, importPKCS8, importJWK, generateKeyPair } from 'jose'
+import { exportJWK, importPKCS8, importJWK, generateKeyPair, type JWKParameters } from 'jose'
 import Redis from 'ioredis'
 import { RedisAdapter } from './redis-adapter'
 import { findAccount } from './find-account'
@@ -8,7 +8,7 @@ let provider: Provider | undefined
 
 const JWKS_REDIS_KEY = 'oidc:server:jwks'
 
-function decorateJWK(jwk: Record<string, unknown>) {
+function decorateJWK(jwk: JWKParameters) {
   jwk.kid = 'key1'
   jwk.use = 'sig'
   jwk.alg = 'RS256'
