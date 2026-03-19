@@ -45,10 +45,13 @@ describe('parseAccountId', () => {
     expect(result.address).toBe(getAddress(addr))
   })
 
-  it('returns NaN chainId for non-numeric chain ID', () => {
+  it('throws on non-numeric chain ID', () => {
     const addr = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
-    const result = parseAccountId(`eip155:abc:${addr}`)
-    expect(result.chainId).toBeNaN()
-    expect(result.address).toBe(getAddress(addr))
+    expect(() => parseAccountId(`eip155:abc:${addr}`)).toThrow('chain ID must be numeric')
+  })
+
+  it('throws on wrong prefix', () => {
+    const addr = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
+    expect(() => parseAccountId(`cosmos:1:${addr}`)).toThrow('expected eip155 prefix')
   })
 })

@@ -75,12 +75,6 @@ export async function getProvider(): Promise<Provider> {
     findAccount,
     jwks,
 
-    routes: {
-      authorization: '/authorize',
-      jwks: '/jwk',
-      registration: '/register',
-    },
-
     cookies: {
       keys: cookieKeys,
       short: { path: '/' },
@@ -108,7 +102,24 @@ export async function getProvider(): Promise<Provider> {
         idFactory: () => crypto.randomUUID(),
         secretFactory: () => crypto.randomUUID(),
       },
+      introspection: { enabled: true },
+      revocation: { enabled: true },
       devInteractions: { enabled: false },
+    },
+
+    extraClientMetadata: {
+      properties: [],
+      validator(_ctx, key, value) {
+        if (key === 'redirect_uris') {
+          for (const uri of value as string[]) {
+            if (new URL(uri).protocol !== 'https:') {
+              throw new Provider.errors.InvalidClientMetadata(
+                'redirect_uris must use the https scheme',
+              )
+            }
+          }
+        }
+      },
     },
 
     interactions: {

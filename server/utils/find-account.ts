@@ -11,8 +11,12 @@ export function parseAccountId(accountId: string): {
   address: Address
 } {
   const parts = accountId.split(':')
+  if (parts.length < 3) throw new Error('Invalid account ID: expected eip155:{chainId}:{address}')
+  if (parts[0] !== 'eip155') throw new Error('Invalid account ID: expected eip155 prefix')
+  const chainId = parseInt(parts[1]!, 10)
+  if (Number.isNaN(chainId)) throw new Error('Invalid account ID: chain ID must be numeric')
   return {
-    chainId: parseInt(parts[1]!, 10),
+    chainId,
     address: getAddress(parts[2]!),
   }
 }

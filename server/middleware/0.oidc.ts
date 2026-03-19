@@ -4,15 +4,12 @@ import { getProvider } from '../utils/provider'
 const OIDC_PATHS = [
   '/.well-known/openid-configuration',
   '/.well-known/webfinger',
-  '/authorize',
+  '/auth',
   '/token',
-  '/userinfo',
   '/me',
-  '/jwk',
-  '/register',
-  '/introspection',
-  '/revocation',
-  '/end_session',
+  '/jwks',
+  '/reg',
+  '/session/end',
 ]
 
 let handler: ReturnType<typeof fromNodeMiddleware> | undefined

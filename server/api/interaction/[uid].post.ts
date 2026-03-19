@@ -1,5 +1,5 @@
 import { getProvider } from '../../utils/provider'
-import { getAddress } from 'viem'
+import { getAddress, isAddress } from 'viem'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 
@@ -53,6 +53,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       statusMessage: 'SIWE message missing address',
+    })
+  }
+
+  if (!isAddress(address)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'SIWE message contains invalid Ethereum address',
     })
   }
 

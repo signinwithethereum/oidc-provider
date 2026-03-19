@@ -34,6 +34,7 @@ function createSiweMessage(params: {
   chainId: number
   nonce: string
   statement?: string
+  resources?: string[]
 }): string {
   const lines = [
     `${params.domain} wants you to sign in with your Ethereum account:`,
@@ -48,6 +49,10 @@ function createSiweMessage(params: {
     `Nonce: ${params.nonce}`,
     `Issued At: ${new Date().toISOString()}`,
   )
+  if (params.resources?.length) {
+    lines.push('Resources:')
+    for (const r of params.resources) lines.push(`- ${r}`)
+  }
   return lines.join('\n')
 }
 
@@ -72,6 +77,92 @@ function mergeCookies(...parts: string[]): string {
 }
 
 describe.skipIf(!serverAvailable)('siwe-oidc', () => {
+  /** Register a client, start an auth flow, and return the uid + cookies + clientId. */
+  async function startInteraction() {
+    const client = await fetch(apiUrl('/reg'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        redirect_uris: ['https://example.com/callback'],
+        token_endpoint_auth_method: 'none',
+      }),
+    }).then((r) => r.json())
+
+    const authUrl = new URL('/auth', BASE)
+    authUrl.searchParams.set('client_id', client.client_id)
+    authUrl.searchParams.set('redirect_uri', 'https://example.com/callback')
+    authUrl.searchParams.set('response_type', 'code')
+    authUrl.searchParams.set('scope', 'openid profile')
+
+    const authRes = await fetch(authUrl, { redirect: 'manual' })
+    const interactionUrl = authRes.headers.get('location')!
+    let cookies = extractCookies(authRes)
+    const uid = interactionUrl.split('/interaction/')[1]!.split('?')[0]!
+
+    const detailsRes = await fetch(apiUrl(`/api/interaction/${uid}`), {
+      headers: { cookie: cookies },
+    })
+    cookies = mergeCookies(cookies, extractCookies(detailsRes))
+    return { uid, cookies, clientId: client.client_id as string }
+  }
+
+  /** Run the full SIWE auth flow and return tokens + the authorization code. */
+  async function completeAuthFlow() {
+    const { uid, cookies, clientId } = await startInteraction()
+
+    const message = createSiweMessage({
+      domain: new URL(BASE).host,
+      address: account.address,
+      uri: BASE,
+      chainId: 1,
+      nonce: uid,
+      statement: 'Sign-In with Ethereum',
+      resources: ['https://example.com/callback'],
+    })
+    const signature = await account.signMessage({ message })
+
+    const verifyRes = await fetch(apiUrl(`/api/interaction/${uid}`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', cookie: cookies },
+      body: JSON.stringify({ message, signature }),
+      redirect: 'manual',
+    })
+
+    let updatedCookies = mergeCookies(cookies, extractCookies(verifyRes))
+    let location = verifyRes.headers.get('location')!
+
+    for (let i = 0; i < 5; i++) {
+      if (location.startsWith('https://example.com')) break
+      const res = await fetch(apiUrl(location), {
+        headers: { cookie: updatedCookies },
+        redirect: 'manual',
+      })
+      updatedCookies = mergeCookies(updatedCookies, extractCookies(res))
+      location = res.headers.get('location')!
+    }
+
+    const code = new URL(location).searchParams.get('code')!
+
+    const tokenRes = await fetch(apiUrl('/token'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: 'https://example.com/callback',
+        client_id: clientId,
+      }),
+    })
+    const tokens = await tokenRes.json()
+
+    return {
+      accessToken: tokens.access_token as string,
+      idToken: tokens.id_token as string,
+      clientId,
+      code,
+    }
+  }
+
   describe('discovery', () => {
     it('serves OpenID configuration', async () => {
       const res = await fetch(apiUrl('/.well-known/openid-configuration'))
@@ -88,7 +179,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
     })
 
     it('serves JWKS', async () => {
-      const res = await fetch(apiUrl('/jwk'))
+      const res = await fetch(apiUrl('/jwks'))
       expect(res.status).toBe(200)
       const jwks = await res.json()
       expect(jwks).toHaveProperty('keys')
@@ -100,7 +191,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
 
   describe('client registration', () => {
     it('registers a new client', async () => {
-      const res = await fetch(apiUrl('/register'), {
+      const res = await fetch(apiUrl('/reg'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +210,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
   describe('full auth flow', () => {
     it('completes SIWE login and issues tokens', async () => {
       // 1. Register client
-      const client = await fetch(apiUrl('/register'), {
+      const client = await fetch(apiUrl('/reg'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,7 +220,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       }).then((r) => r.json())
 
       // 2. Start auth flow — provider 303s to /interaction/{uid}
-      const authUrl = new URL('/authorize', BASE)
+      const authUrl = new URL('/auth', BASE)
       authUrl.searchParams.set('client_id', client.client_id)
       authUrl.searchParams.set('redirect_uri', 'https://example.com/callback')
       authUrl.searchParams.set('response_type', 'code')
@@ -163,6 +254,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         chainId: 1,
         nonce: uid,
         statement: 'Sign-In with Ethereum',
+        resources: ['https://example.com/callback'],
       })
       const signature = await account.signMessage({ message })
 
@@ -224,7 +316,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       expect(tokens.token_type).toBe('Bearer')
 
       // 8. Verify id_token signature against the JWKS and check claims
-      const jwksData = await fetch(apiUrl('/jwk')).then((r) => r.json())
+      const jwksData = await fetch(apiUrl('/jwks')).then((r) => r.json())
       const pubKey = await importJWK(jwksData.keys[0], 'RS256')
       const { payload: claims } = await jwtVerify(tokens.id_token, pubKey, {
         issuer: BASE,
@@ -247,35 +339,6 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
   })
 
   describe('rejection cases', () => {
-    /** Set up an interaction and return the uid + cookies. */
-    async function startInteraction() {
-      const client = await fetch(apiUrl('/register'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          redirect_uris: ['https://example.com/callback'],
-          token_endpoint_auth_method: 'none',
-        }),
-      }).then((r) => r.json())
-
-      const authUrl = new URL('/authorize', BASE)
-      authUrl.searchParams.set('client_id', client.client_id)
-      authUrl.searchParams.set('redirect_uri', 'https://example.com/callback')
-      authUrl.searchParams.set('response_type', 'code')
-      authUrl.searchParams.set('scope', 'openid')
-
-      const authRes = await fetch(authUrl, { redirect: 'manual' })
-      const interactionUrl = authRes.headers.get('location')!
-      let cookies = extractCookies(authRes)
-      const uid = interactionUrl.split('/interaction/')[1]!.split('?')[0]!
-
-      const detailsRes = await fetch(apiUrl(`/api/interaction/${uid}`), {
-        headers: { cookie: cookies },
-      })
-      cookies = mergeCookies(cookies, extractCookies(detailsRes))
-      return { uid, cookies }
-    }
-
     it('rejects missing message or signature', async () => {
       const { uid, cookies } = await startInteraction()
 
@@ -320,6 +383,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         uri: BASE,
         chainId: 1,
         nonce: uid,
+        resources: ['https://example.com/callback'],
       })
       const badSig = '0x' + 'ab'.repeat(65) // garbage 65-byte signature
 
@@ -344,6 +408,273 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       expect(res.status).toBe(400)
       const body = await res.json()
       expect(body.statusMessage).toMatch(/Invalid interaction session/)
+    })
+  })
+
+  describe('OIDC endpoint availability', () => {
+    it('advertises introspection, revocation, and end_session endpoints', async () => {
+      const res = await fetch(apiUrl('/.well-known/openid-configuration'))
+      const config = await res.json()
+      expect(config).toHaveProperty('introspection_endpoint')
+      expect(config).toHaveProperty('revocation_endpoint')
+      expect(config).toHaveProperty('end_session_endpoint')
+    })
+
+    it('/introspection requires client authentication', async () => {
+      const res = await fetch(apiUrl('/token/introspection'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token: 'fake-token' }),
+      })
+      expect(res.status).toBe(401)
+      const body = await res.json()
+      expect(body.error).toBe('invalid_client')
+    })
+
+    it('/revocation requires client authentication', async () => {
+      const res = await fetch(apiUrl('/token/revocation'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token: 'fake-token' }),
+      })
+      expect(res.status).toBe(401)
+      const body = await res.json()
+      expect(body.error).toBe('invalid_client')
+    })
+
+    it('/end_session is routed to the provider', async () => {
+      const res = await fetch(apiUrl('/session/end'))
+      // Without a valid session the provider still handles the request (not a 404)
+      expect(res.status).toBeLessThan(500)
+    })
+  })
+
+  describe('client registration validation', () => {
+    it('rejects http redirect_uri', async () => {
+      const res = await fetch(apiUrl('/reg'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          redirect_uris: ['http://example.com/callback'],
+          application_type: 'web',
+        }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.error).toBe('invalid_client_metadata')
+    })
+
+    it('rejects registration with no redirect_uris', async () => {
+      const res = await fetch(apiUrl('/reg'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ application_type: 'web' }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('rejects redirect_uri with fragment', async () => {
+      const res = await fetch(apiUrl('/reg'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          redirect_uris: ['https://example.com/callback#fragment'],
+        }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.error).toBe('invalid_redirect_uri')
+    })
+  })
+
+  describe('token exchange edge cases', () => {
+    it('rejects a replayed authorization code', async () => {
+      const { code, clientId } = await completeAuthFlow()
+
+      // Code was already exchanged — reuse should fail
+      const tokenRes = await fetch(apiUrl('/token'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: 'https://example.com/callback',
+          client_id: clientId,
+        }),
+      })
+      expect(tokenRes.status).toBe(400)
+      const body = await tokenRes.json()
+      expect(body.error).toBe('invalid_grant')
+    })
+
+    it('rejects a fabricated authorization code', async () => {
+      const client = await fetch(apiUrl('/reg'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          redirect_uris: ['https://example.com/callback'],
+          token_endpoint_auth_method: 'none',
+        }),
+      }).then((r) => r.json())
+
+      const tokenRes = await fetch(apiUrl('/token'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: 'totally-fabricated-code',
+          redirect_uri: 'https://example.com/callback',
+          client_id: client.client_id,
+        }),
+      })
+      expect(tokenRes.status).toBe(400)
+      const body = await tokenRes.json()
+      expect(body.error).toBe('invalid_grant')
+    })
+  })
+
+  describe('userinfo edge cases', () => {
+    it('rejects request with no authorization header', async () => {
+      const res = await fetch(apiUrl('/me'))
+      expect(res.status).toBeGreaterThanOrEqual(400)
+    })
+
+    it('rejects request with invalid access token', async () => {
+      const res = await fetch(apiUrl('/me'), {
+        headers: { Authorization: 'Bearer totally-invalid-token' },
+      })
+      expect(res.status).toBe(401)
+    })
+
+    it('rejects request with wrong Bearer scheme', async () => {
+      const res = await fetch(apiUrl('/me'), {
+        headers: { Authorization: 'Basic dXNlcjpwYXNz' },
+      })
+      expect(res.status).toBeGreaterThanOrEqual(400)
+    })
+  })
+
+  describe('SIWE message validation', () => {
+    it('rejects SIWE message with empty address line', async () => {
+      const { uid, cookies } = await startInteraction()
+
+      const malformedMessage = [
+        `${new URL(BASE).host} wants you to sign in with your Ethereum account:`,
+        '', // empty address line
+        '',
+        `URI: ${BASE}`,
+        `Version: 1`,
+        `Chain ID: 1`,
+        `Nonce: ${uid}`,
+        `Issued At: ${new Date().toISOString()}`,
+      ].join('\n')
+      const signature = await account.signMessage({ message: malformedMessage })
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookies },
+        body: JSON.stringify({ message: malformedMessage, signature }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.statusMessage).toMatch(/SIWE message missing address/)
+    })
+
+    it('rejects SIWE message with malformed address', async () => {
+      const { uid, cookies } = await startInteraction()
+
+      const malformedMessage = [
+        `${new URL(BASE).host} wants you to sign in with your Ethereum account:`,
+        'not-a-valid-address',
+        '',
+        `URI: ${BASE}`,
+        `Version: 1`,
+        `Chain ID: 1`,
+        `Nonce: ${uid}`,
+        `Issued At: ${new Date().toISOString()}`,
+      ].join('\n')
+      const signature = await account.signMessage({ message: malformedMessage })
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookies },
+        body: JSON.stringify({ message: malformedMessage, signature }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.statusMessage).toMatch(/invalid Ethereum address/)
+    })
+
+    it('rejects SIWE message with mismatched domain', async () => {
+      const { uid, cookies } = await startInteraction()
+
+      const message = createSiweMessage({
+        domain: 'evil.com',
+        address: account.address,
+        uri: 'https://evil.com',
+        chainId: 1,
+        nonce: uid,
+        statement: 'Sign-In with Ethereum',
+        resources: ['https://example.com/callback'],
+      })
+      const signature = await account.signMessage({ message })
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookies },
+        body: JSON.stringify({ message, signature }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      // viem rejects domain mismatch as part of verifySiweMessage
+      expect(body.statusMessage).toMatch(/Invalid SIWE signature/)
+    })
+
+    it('rejects SIWE message with missing resources', async () => {
+      const { uid, cookies } = await startInteraction()
+
+      const message = createSiweMessage({
+        domain: new URL(BASE).host,
+        address: account.address,
+        uri: BASE,
+        chainId: 1,
+        nonce: uid,
+        statement: 'Sign-In with Ethereum',
+      })
+      const signature = await account.signMessage({ message })
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookies },
+        body: JSON.stringify({ message, signature }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.statusMessage).toMatch(/Missing resource/)
+    })
+
+    it('rejects SIWE message with wrong redirect_uri in resources', async () => {
+      const { uid, cookies } = await startInteraction()
+
+      const message = createSiweMessage({
+        domain: new URL(BASE).host,
+        address: account.address,
+        uri: BASE,
+        chainId: 1,
+        nonce: uid,
+        statement: 'Sign-In with Ethereum',
+        resources: ['https://evil.com/steal'],
+      })
+      const signature = await account.signMessage({ message })
+
+      const res = await fetch(apiUrl(`/api/interaction/${uid}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookies },
+        body: JSON.stringify({ message, signature }),
+      })
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.statusMessage).toMatch(/resource does not match redirect_uri/)
     })
   })
 })
