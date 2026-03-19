@@ -20,7 +20,7 @@ let handler: ReturnType<typeof fromNodeMiddleware> | undefined
 export default defineEventHandler(async (event) => {
   const path = event.path.split('?')[0] ?? event.path
 
-  if (!OIDC_PATHS.some(p => path === p || path.startsWith(p + '/'))) return
+  if (!OIDC_PATHS.some((p) => path === p || path.startsWith(p + '/'))) return
 
   if (!handler) {
     const provider = await getProvider()

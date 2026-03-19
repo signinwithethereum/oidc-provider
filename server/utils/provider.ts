@@ -1,5 +1,11 @@
 import Provider from 'oidc-provider'
-import { exportJWK, importPKCS8, importJWK, generateKeyPair, type JWKParameters } from 'jose'
+import {
+  exportJWK,
+  importPKCS8,
+  importJWK,
+  generateKeyPair,
+  type JWKParameters,
+} from 'jose'
 import Redis from 'ioredis'
 import { RedisAdapter } from './redis-adapter'
 import { findAccount } from './find-account'
@@ -45,10 +51,15 @@ async function buildJWKS(rsaPem: string, redisUrl: string) {
 
 function parseCookieKeys(keys: string): string[] {
   if (!keys) {
-    console.warn('NUXT_OIDC_COOKIE_KEYS not set — using insecure default. Set this in production.')
+    console.warn(
+      'NUXT_OIDC_COOKIE_KEYS not set — using insecure default. Set this in production.',
+    )
     return ['default-insecure-key']
   }
-  return keys.split(',').map(k => k.trim()).filter(Boolean)
+  return keys
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean)
 }
 
 export async function getProvider(): Promise<Provider> {
@@ -113,7 +124,9 @@ export async function getProvider(): Promise<Provider> {
     clientDefaults: {
       grant_types: ['authorization_code'],
       response_types: ['code'],
-      token_endpoint_auth_method: oidc.requireSecret ? 'client_secret_basic' : 'none',
+      token_endpoint_auth_method: oidc.requireSecret
+        ? 'client_secret_basic'
+        : 'none',
     },
   })
 
@@ -142,14 +155,20 @@ export async function seedDefaultClients(): Promise<void> {
 
       // Seed via the adapter directly
       const adapter = new RedisAdapter('Client')
-      await adapter.upsert(clientId, {
-        client_id: clientId,
-        client_secret: crypto.randomUUID(),
-        redirect_uris: [redirectUri],
-        grant_types: ['authorization_code'],
-        response_types: ['code'],
-        token_endpoint_auth_method: oidc.requireSecret ? 'client_secret_basic' : 'none',
-      }, 0)
+      await adapter.upsert(
+        clientId,
+        {
+          client_id: clientId,
+          client_secret: crypto.randomUUID(),
+          redirect_uris: [redirectUri],
+          grant_types: ['authorization_code'],
+          response_types: ['code'],
+          token_endpoint_auth_method: oidc.requireSecret
+            ? 'client_secret_basic'
+            : 'none',
+        },
+        0,
+      )
 
       console.log(`Seeded default client: ${clientId}`)
     } catch (e) {

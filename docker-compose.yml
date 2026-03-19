@@ -2,7 +2,7 @@ services:
   siwe-oidc:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NUXT_OIDC_BASE_URL=http://localhost:3000
       - NUXT_OIDC_REDIS_URL=redis://redis:6379
@@ -16,9 +16,9 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - '6379:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5

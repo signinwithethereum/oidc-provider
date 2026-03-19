@@ -2,7 +2,7 @@ name: Publish Docker
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   release:
     types: [published, created, edited]
 
@@ -10,14 +10,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: Build and push image
-      uses: elgohr/Publish-Docker-Github-Action@master
-      with:
-        name: signinwithethereum/oidc
-        username: ${{ github.actor }}
-        password: ${{ secrets.GH_PACKAGE_PUSH_TOKEN }}
-        registry: ghcr.io
-        tag_names: true
-        tag_semver: true
-        snapshot: true
+      - uses: actions/checkout@master
+      - name: Build and push image
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: signinwithethereum/oidc
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_PACKAGE_PUSH_TOKEN }}
+          registry: ghcr.io
+          tag_names: true
+          tag_semver: true
+          snapshot: true

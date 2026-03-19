@@ -36,7 +36,11 @@ export class RedisAdapter implements Adapter {
     this.model = model
   }
 
-  async upsert(id: string, payload: AdapterPayload, expiresIn: number): Promise<void> {
+  async upsert(
+    id: string,
+    payload: AdapterPayload,
+    expiresIn: number,
+  ): Promise<void> {
     const redis = getClient()
     const k = key(this.model, id)
     const data = JSON.stringify(payload)

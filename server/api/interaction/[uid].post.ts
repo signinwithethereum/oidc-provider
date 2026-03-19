@@ -16,7 +16,9 @@ function siweAddress(message: string): string | undefined {
 
 export default defineEventHandler(async (event) => {
   const provider = await getProvider()
-  const { node: { req, res } } = event
+  const {
+    node: { req, res },
+  } = event
 
   // Get interaction details — validates the session cookie
   let details

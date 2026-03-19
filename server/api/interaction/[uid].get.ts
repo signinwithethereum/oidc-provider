@@ -2,11 +2,15 @@ import { getProvider } from '../../utils/provider'
 
 export default defineEventHandler(async (event) => {
   const provider = await getProvider()
-  const { node: { req, res } } = event
+  const {
+    node: { req, res },
+  } = event
 
   try {
     const details = await provider.interactionDetails(req, res)
-    const client = await provider.Client.find(details.params.client_id as string)
+    const client = await provider.Client.find(
+      details.params.client_id as string,
+    )
     const meta = client?.metadata()
     return {
       uid: details.uid,
