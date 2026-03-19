@@ -75,6 +75,12 @@ export async function getProvider(): Promise<Provider> {
     findAccount,
     jwks,
 
+    routes: {
+      authorization: '/authorize',
+      jwks: '/jwk',
+      registration: '/register',
+    },
+
     cookies: {
       keys: cookieKeys,
     },

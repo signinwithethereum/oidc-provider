@@ -75,7 +75,7 @@ describe('siwe-oidc', () => {
     })
 
     it('serves JWKS', async () => {
-      const res = await fetch(apiUrl('/jwks'))
+      const res = await fetch(apiUrl('/jwk'))
       expect(res.status).toBe(200)
       const jwks = await res.json()
       expect(jwks).toHaveProperty('keys')
@@ -87,7 +87,7 @@ describe('siwe-oidc', () => {
 
   describe('client registration', () => {
     it('registers a new client', async () => {
-      const res = await fetch(apiUrl('/reg'), {
+      const res = await fetch(apiUrl('/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -106,7 +106,7 @@ describe('siwe-oidc', () => {
   describe('full auth flow', () => {
     it('completes SIWE login and issues tokens', async () => {
       // 1. Register client
-      const client = await fetch(apiUrl('/reg'), {
+      const client = await fetch(apiUrl('/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,7 +116,7 @@ describe('siwe-oidc', () => {
       }).then((r) => r.json())
 
       // 2. Start auth flow — provider 303s to /interaction/{uid}
-      const authUrl = new URL('/auth', BASE)
+      const authUrl = new URL('/authorize', BASE)
       authUrl.searchParams.set('client_id', client.client_id)
       authUrl.searchParams.set('redirect_uri', 'https://example.com/callback')
       authUrl.searchParams.set('response_type', 'code')
@@ -211,7 +211,7 @@ describe('siwe-oidc', () => {
       expect(tokens.token_type).toBe('Bearer')
 
       // 8. Verify id_token signature against the JWKS and check claims
-      const jwksData = await fetch(apiUrl('/jwks')).then((r) => r.json())
+      const jwksData = await fetch(apiUrl('/jwk')).then((r) => r.json())
       const pubKey = await importJWK(jwksData.keys[0], 'RS256')
       const { payload: claims } = await jwtVerify(tokens.id_token, pubKey, {
         issuer: BASE,
@@ -236,7 +236,7 @@ describe('siwe-oidc', () => {
   describe('rejection cases', () => {
     /** Set up an interaction and return the uid + cookies. */
     async function startInteraction() {
-      const client = await fetch(apiUrl('/reg'), {
+      const client = await fetch(apiUrl('/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -245,7 +245,7 @@ describe('siwe-oidc', () => {
         }),
       }).then((r) => r.json())
 
-      const authUrl = new URL('/auth', BASE)
+      const authUrl = new URL('/authorize', BASE)
       authUrl.searchParams.set('client_id', client.client_id)
       authUrl.searchParams.set('redirect_uri', 'https://example.com/callback')
       authUrl.searchParams.set('response_type', 'code')
