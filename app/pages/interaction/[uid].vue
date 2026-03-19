@@ -5,14 +5,6 @@ const uid = route.params.uid as string
 const { data, error } = await useFetch(`/api/interaction/${uid}`, {
   headers: useRequestHeaders(['cookie']),
 })
-
-const title = computed(() =>
-  !!error.value
-    ? 'Session Expired'
-    : !!data
-      ? 'Sign In With Ethereum'
-      : 'Unknown',
-)
 </script>
 
 <template>
@@ -21,14 +13,13 @@ const title = computed(() =>
       :open="!!error || !!data"
       :closable="false"
       :click-outside="false"
+      :title="error ? error.data?.message || 'Session Expired' : undefined"
     >
       <template v-if="error">
         <p class="muted">
           This login session is no longer valid. Please try again from your
           application.
         </p>
-        <p>{{ error.data?.message }}</p>
-        <pre>{{ error.data }}</pre>
       </template>
 
       <template v-else-if="data?.params?.client_id">
@@ -90,12 +81,6 @@ const title = computed(() =>
 </template>
 
 <style scoped>
-main {
-  max-width: 45rem;
-  padding: var(--spacer);
-  margin: auto;
-}
-
 .client-info {
   text-align: center;
   padding: var(--spacer) var(--spacer) 0;
