@@ -29,4 +29,26 @@ describe('parseAccountId', () => {
   it('throws on invalid address', () => {
     expect(() => parseAccountId('eip155:1:0xinvalid')).toThrow()
   })
+
+  it('throws on empty string', () => {
+    expect(() => parseAccountId('')).toThrow()
+  })
+
+  it('throws when fewer than 3 colon-separated parts', () => {
+    expect(() => parseAccountId('eip155:1')).toThrow()
+  })
+
+  it('ignores extra colon-separated segments', () => {
+    const addr = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
+    const result = parseAccountId(`eip155:1:${addr}:extra:stuff`)
+    expect(result.chainId).toBe(1)
+    expect(result.address).toBe(getAddress(addr))
+  })
+
+  it('returns NaN chainId for non-numeric chain ID', () => {
+    const addr = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
+    const result = parseAccountId(`eip155:abc:${addr}`)
+    expect(result.chainId).toBeNaN()
+    expect(result.address).toBe(getAddress(addr))
+  })
 })
