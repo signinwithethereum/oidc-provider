@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@1001-digital/layers.evm':
-        specifier: ^2.4.0
-        version: 2.4.0(5d229745de54dd5b2cef11bb6b3b530c)
+        specifier: ^2.5.0
+        version: 2.5.0(be948b185af7c7b4d9152354429ff704)
       ioredis:
         specifier: ^5.6.1
         version: 5.10.0
@@ -64,13 +64,11 @@ packages:
   '@1001-digital/dweb-fetch@0.1.6':
     resolution: {integrity: sha512-FI9l7FP7SQbFxn2cSMVwL/5nPWQH/2xeXiqo87aUp5/NjswQVHMn6655iQLascoKlMYLYJHvAzqP39g5tDf2Yw==}
 
-  '@1001-digital/layers.base@2.0.5':
-    resolution: {integrity: sha512-suH3RHr3aTsCxOmWVYSuXHK/waVsjzefJABQ5ev514WicTVt//6vose4PhMB7soUZDtXGRlG8hIZWIolnedRng==}
+  '@1001-digital/layers.base@2.0.6':
+    resolution: {integrity: sha512-wzfcYHC0apviFkLlsCYLeeSQDDrSo0d5uICqxe6bIvVel6/MCmMuLjXqKVF5YgXWAb332P1ErYMNMVIZbyNzMw==}
 
-  '@1001-digital/layers.evm@2.4.0':
-    resolution: {integrity: sha512-RFgsDB64NxoayBxHl9IydtbINszKOJIj8/a+fs7J33dIK1BRQ+vnzlbyrb1Nc4+ArpcgJnKzaE8gTyLFNeVRFg==}
-    peerDependencies:
-      '@1001-digital/layers.base': ^2.0.6
+  '@1001-digital/layers.evm@2.5.0':
+    resolution: {integrity: sha512-teM2iIKmgBzlByrfD/wjGwelKOMjX0hyk2F5xkBrSZc1BVvsfx8ZatWYSDiP8j21z862w7He5a/tpdeCRPA2Qw==}
 
   '@1001-digital/styles@2.1.2':
     resolution: {integrity: sha512-ozMvCPML7ER7gPKdS+bwBL2UrCuUKx6iB7K7icQhuqvP47UtTzNbqa3NzBGiVNxo7G0HmjcGxlafqn8I/bkO5g==}
@@ -7532,7 +7530,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@1001-digital/layers.base@2.0.5(magicast@0.5.2)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(terser@5.46.1)(yaml@2.8.2))(vue@3.5.30(typescript@5.9.3))':
+  '@1001-digital/layers.base@2.0.6(magicast@0.5.2)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(terser@5.46.1)(yaml@2.8.2))(vue@3.5.30(typescript@5.9.3))':
     dependencies:
       '@1001-digital/components': 2.0.8(@1001-digital/styles@2.1.2)(vue@3.5.30(typescript@5.9.3))
       '@1001-digital/styles': 2.1.2
@@ -7545,11 +7543,11 @@ snapshots:
       - vite
       - vue
 
-  '@1001-digital/layers.evm@2.4.0(5d229745de54dd5b2cef11bb6b3b530c)':
+  '@1001-digital/layers.evm@2.5.0(be948b185af7c7b4d9152354429ff704)':
     dependencies:
       '@1001-digital/components': 2.0.8(@1001-digital/styles@2.1.2)(vue@3.5.30(typescript@5.9.3))
       '@1001-digital/components.evm': 2.4.0(@1001-digital/components@2.0.8(@1001-digital/styles@2.1.2)(vue@3.5.30(typescript@5.9.3)))(@vueuse/core@14.2.1(vue@3.5.30(typescript@5.9.3)))(@wagmi/core@3.4.0(@tanstack/query-core@5.91.0)(@types/react@19.2.14)(ox@0.14.5(typescript@5.9.3)(zod@3.25.76))(react@19.2.4)(typescript@5.9.3)(viem@2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)))(@wagmi/vue@0.5.0(e0189bdf0ed6aa732931d177b6af5fa8))(bufferutil@4.1.0)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.4)(utf-8-validate@6.0.6))(utf-8-validate@6.0.6)(viem@2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))(vue@3.5.30(typescript@5.9.3))
-      '@1001-digital/layers.base': 2.0.5(magicast@0.5.2)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(terser@5.46.1)(yaml@2.8.2))(vue@3.5.30(typescript@5.9.3))
+      '@1001-digital/layers.base': 2.0.6(magicast@0.5.2)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(terser@5.46.1)(yaml@2.8.2))(vue@3.5.30(typescript@5.9.3))
       '@base-org/account': 2.5.2(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.4)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)
       '@metamask/sdk': 0.34.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       '@safe-global/safe-apps-provider': 0.18.6(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)
@@ -7589,6 +7587,7 @@ snapshots:
       - fastestsmallesttextencoderdecoder
       - immer
       - ioredis
+      - magicast
       - nuxt
       - ox
       - porto
@@ -7599,6 +7598,7 @@ snapshots:
       - uploadthing
       - use-sync-external-store
       - utf-8-validate
+      - vite
       - vue
       - zod
 
