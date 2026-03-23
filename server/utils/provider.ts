@@ -156,13 +156,22 @@ export async function getProvider(): Promise<Provider> {
   return provider
 }
 
+interface DefaultClientConfig {
+  redirect_uri: string
+  client_name?: string
+  logo_uri?: string
+  client_uri?: string
+  policy_uri?: string
+  tos_uri?: string
+}
+
 export async function seedDefaultClients(): Promise<void> {
   const { oidc } = useRuntimeConfig()
-  let clients: Record<string, string>
+  let clients: Record<string, string | DefaultClientConfig>
   const raw = oidc.defaultClients
   if (!raw) return
   if (typeof raw === 'object') {
-    clients = raw as Record<string, string>
+    clients = raw as Record<string, string | DefaultClientConfig>
   } else {
     try {
       clients = JSON.parse(raw)
@@ -176,26 +185,35 @@ export async function seedDefaultClients(): Promise<void> {
 
   const p = await getProvider()
 
-  for (const [clientId, redirectUri] of Object.entries(clients)) {
+  for (const [clientId, value] of Object.entries(clients)) {
     try {
-      // Check if client already exists
-      const existing = await p.Client.find(clientId)
-      if (existing) continue
+      // Support both simple string (redirect_uri) and rich object
+      const config: DefaultClientConfig =
+        typeof value === 'string' ? { redirect_uri: value } : value
 
-      // Seed via the adapter directly
+      // Preserve existing client_secret if client already exists
+      const existing = await p.Client.find(clientId)
+      const clientSecret = existing?.metadata().client_secret || crypto.randomUUID()
+
+      // Upsert via the adapter (always update to pick up metadata changes)
       const adapter = new RedisAdapter('Client')
       await adapter.upsert(
         clientId,
         {
           client_id: clientId,
-          client_secret: crypto.randomUUID(),
-          redirect_uris: [redirectUri],
-          post_logout_redirect_uris: [new URL('/', redirectUri).toString()],
+          client_secret: clientSecret,
+          redirect_uris: [config.redirect_uri],
+          post_logout_redirect_uris: [new URL('/', config.redirect_uri).toString()],
           grant_types: ['authorization_code'],
           response_types: ['code'],
           token_endpoint_auth_method: oidc.requireSecret
             ? 'client_secret_basic'
             : 'none',
+          ...(config.client_name && { client_name: config.client_name }),
+          ...(config.logo_uri && { logo_uri: config.logo_uri }),
+          ...(config.client_uri && { client_uri: config.client_uri }),
+          ...(config.policy_uri && { policy_uri: config.policy_uri }),
+          ...(config.tos_uri && { tos_uri: config.tos_uri }),
         },
         0,
       )
