@@ -190,6 +190,7 @@ export async function seedDefaultClients(): Promise<void> {
           client_id: clientId,
           client_secret: crypto.randomUUID(),
           redirect_uris: [redirectUri],
+          post_logout_redirect_uris: [new URL('/', redirectUri).toString()],
           grant_types: ['authorization_code'],
           response_types: ['code'],
           token_endpoint_auth_method: oidc.requireSecret
