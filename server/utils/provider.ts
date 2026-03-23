@@ -50,16 +50,20 @@ async function buildJWKS(rsaPem: string, redisUrl: string) {
 }
 
 function parseCookieKeys(keys: string): string[] {
-  if (!keys) {
-    console.warn(
-      'NUXT_OIDC_COOKIE_KEYS not set — using insecure default. Set this in production.',
+  const parsed = keys
+    ? keys
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean)
+    : []
+
+  if (!parsed.length) {
+    throw new Error(
+      'NUXT_OIDC_COOKIE_KEYS is not set. Provide at least one signing key via the NUXT_OIDC_COOKIE_KEYS environment variable.',
     )
-    return ['default-insecure-key']
   }
-  return keys
-    .split(',')
-    .map((k) => k.trim())
-    .filter(Boolean)
+
+  return parsed
 }
 
 export async function getProvider(): Promise<Provider> {
