@@ -51,6 +51,7 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
 
         <SiweLogin
           :uid="uid"
+          :nonce="data.nonce"
           :client-id="data.params?.client_id"
           :redirect-uri="data.params?.redirect_uri"
         />

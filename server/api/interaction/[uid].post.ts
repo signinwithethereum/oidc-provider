@@ -1,18 +1,7 @@
 import { getProvider } from '../../utils/provider'
-import { getAddress, isAddress } from 'viem'
-import { createPublicClient, http } from 'viem'
+import { getAddress, isAddress, createPublicClient, http } from 'viem'
+import { parseSiweMessage } from 'viem/siwe'
 import { mainnet } from 'viem/chains'
-
-/** Extract a field value from a raw EIP-4361 SIWE message string. */
-function siweField(message: string, field: string): string | undefined {
-  const match = message.match(new RegExp(`${field}: (.+)`))
-  return match?.[1]
-}
-
-/** Extract the address (line 2) from a SIWE message. */
-function siweAddress(message: string): string | undefined {
-  return message.split('\n')[1]
-}
 
 export default defineEventHandler(async (event) => {
   const provider = await getProvider()
@@ -41,31 +30,29 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // We parse SIWE fields manually instead of using viem's parseSiweMessage
-  // because oidc-provider generates interaction UIDs with dashes and
-  // underscores. EIP-4361 defines nonce as alpha-numeric only, so viem's
-  // parser rejects these UIDs. The signature itself is still verified via
-  // viem's verifySiweMessage which doesn't enforce the nonce charset.
-  const nonce = siweField(message, 'Nonce')
-  const address = siweAddress(message)
-  const chainIdStr = siweField(message, 'Chain ID')
+  // Parse the SIWE message with viem. The nonce is the hex-encoded
+  // interaction UID — oidc-provider UIDs contain dashes/underscores which
+  // violate EIP-4361's alphanumeric-only nonce rule, so we hex-encode to
+  // stay spec-compliant.
+  const parsed = parseSiweMessage(message)
 
-  if (!address) {
+  if (!parsed.address) {
     throw createError({
       statusCode: 400,
       statusMessage: 'SIWE message missing address',
     })
   }
 
-  if (!isAddress(address)) {
+  if (!isAddress(parsed.address)) {
     throw createError({
       statusCode: 400,
       statusMessage: 'SIWE message contains invalid Ethereum address',
     })
   }
 
-  // Validate nonce matches the interaction uid
-  if (nonce !== details.uid) {
+  // Decode the hex nonce back to the interaction UID and compare
+  const decodedNonce = Buffer.from(parsed.nonce ?? '', 'hex').toString()
+  if (decodedNonce !== details.uid) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Nonce mismatch',
@@ -74,8 +61,7 @@ export default defineEventHandler(async (event) => {
 
   // Validate the first Resources entry matches the OIDC redirect_uri
   const redirectUri = details.params.redirect_uri as string | undefined
-  const resourcesMatch = message.match(/^Resources:\n- (.+)$/m)
-  const firstResource = resourcesMatch?.[1]
+  const firstResource = parsed.resources?.[0]
   if (!firstResource) {
     throw createError({
       statusCode: 400,
@@ -110,8 +96,8 @@ export default defineEventHandler(async (event) => {
   }
 
   // Build account ID: eip155:{chainId}:{checksumAddress}
-  const checksumAddress = getAddress(address)
-  const chainId = chainIdStr ? parseInt(chainIdStr, 10) : 1
+  const checksumAddress = getAddress(parsed.address)
+  const chainId = parsed.chainId ?? 1
   const accountId = `eip155:${chainId}:${checksumAddress}`
 
   // Complete the interaction — return redirect URL for the client to navigate to

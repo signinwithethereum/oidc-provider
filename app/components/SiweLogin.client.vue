@@ -3,6 +3,7 @@ import { useSiwe } from '@1001-digital/components.evm'
 
 const props = defineProps<{
   uid: string
+  nonce: string
   clientId?: string
   redirectUri?: string
 }>()
@@ -25,7 +26,7 @@ function disconnect() {
 
 async function handleSignIn() {
   const result = await signIn({
-    getNonce: async () => props.uid,
+    getNonce: async () => props.nonce,
     statement: 'Sign-In with Ethereum',
     resources: props.redirectUri ? [props.redirectUri] : undefined,
     async verify(message, signature) {

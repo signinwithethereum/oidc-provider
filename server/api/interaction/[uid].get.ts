@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
     const meta = client?.metadata()
     return {
       uid: details.uid,
+      nonce: Buffer.from(details.uid).toString('hex'),
       prompt: details.prompt,
       params: {
         client_id: details.params.client_id,

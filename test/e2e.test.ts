@@ -57,6 +57,11 @@ function createSiweMessage(params: {
   return lines.join('\n')
 }
 
+/** Hex-encode a UID for use as an EIP-4361 compliant nonce. */
+function hexNonce(uid: string): string {
+  return Buffer.from(uid).toString('hex')
+}
+
 /** Generate a PKCE code_verifier and S256 code_challenge. */
 function generatePkce() {
   const verifier = randomBytes(32).toString('base64url')
@@ -126,7 +131,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       address: account.address,
       uri: BASE,
       chainId: 1,
-      nonce: uid,
+      nonce: hexNonce(uid),
       statement: 'Sign-In with Ethereum',
       resources: ['https://example.com/callback'],
     })
@@ -268,7 +273,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         address: account.address,
         uri: BASE,
         chainId: 1,
-        nonce: uid,
+        nonce: hexNonce(uid),
         statement: 'Sign-In with Ethereum',
         resources: ['https://example.com/callback'],
       })
@@ -377,7 +382,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         address: account.address,
         uri: BASE,
         chainId: 1,
-        nonce: 'totally-wrong-nonce',
+        nonce: 'deadbeefdeadbeef',
       })
       const signature = await account.signMessage({ message })
 
@@ -399,7 +404,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         address: account.address,
         uri: BASE,
         chainId: 1,
-        nonce: uid,
+        nonce: hexNonce(uid),
         resources: ['https://example.com/callback'],
       })
       const badSig = '0x' + 'ab'.repeat(65) // garbage 65-byte signature
@@ -582,7 +587,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         `URI: ${BASE}`,
         `Version: 1`,
         `Chain ID: 1`,
-        `Nonce: ${uid}`,
+        `Nonce: ${hexNonce(uid)}`,
         `Issued At: ${new Date().toISOString()}`,
       ].join('\n')
       const signature = await account.signMessage({ message: malformedMessage })
@@ -607,7 +612,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         `URI: ${BASE}`,
         `Version: 1`,
         `Chain ID: 1`,
-        `Nonce: ${uid}`,
+        `Nonce: ${hexNonce(uid)}`,
         `Issued At: ${new Date().toISOString()}`,
       ].join('\n')
       const signature = await account.signMessage({ message: malformedMessage })
@@ -630,7 +635,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         address: account.address,
         uri: 'https://evil.com',
         chainId: 1,
-        nonce: uid,
+        nonce: hexNonce(uid),
         statement: 'Sign-In with Ethereum',
         resources: ['https://example.com/callback'],
       })
@@ -655,7 +660,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         address: account.address,
         uri: BASE,
         chainId: 1,
-        nonce: uid,
+        nonce: hexNonce(uid),
         statement: 'Sign-In with Ethereum',
       })
       const signature = await account.signMessage({ message })
@@ -678,7 +683,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
         address: account.address,
         uri: BASE,
         chainId: 1,
-        nonce: uid,
+        nonce: hexNonce(uid),
         statement: 'Sign-In with Ethereum',
         resources: ['https://evil.com/steal'],
       })
