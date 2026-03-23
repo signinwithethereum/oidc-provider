@@ -3,6 +3,14 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   ssr: true,
 
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/favicon.png' },
+      ],
+    },
+  },
+
   extends: ['@1001-digital/layers.evm'],
 
   runtimeConfig: {
