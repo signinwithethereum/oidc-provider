@@ -105,6 +105,19 @@ export async function getProvider(): Promise<Provider> {
       introspection: { enabled: true },
       revocation: { enabled: true },
       devInteractions: { enabled: false },
+      rpInitiatedLogout: {
+        enabled: true,
+        logoutSource(ctx, form) {
+          // Extract xsrf and action from the form HTML
+          const xsrf = form.match(/name="xsrf" value="([^"]+)"/)?.[1] || ''
+          const action = form.match(/action="([^"]+)"/)?.[1] || ''
+          const params = new URLSearchParams({ xsrf, action })
+          ctx.redirect(`/logout?${params}`)
+        },
+        postLogoutSuccessSource(ctx) {
+          ctx.redirect('/logout/success')
+        },
+      },
     },
 
     extraClientMetadata: {
