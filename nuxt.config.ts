@@ -13,6 +13,17 @@ export default defineNuxtConfig({
 
   extends: ['@1001-digital/layers.evm'],
 
+  routeRules: {
+    '/auth': { cors: true },
+    '/token': { cors: true },
+    '/me': { cors: true },
+    '/jwks': { cors: true },
+    '/reg': { cors: true },
+    '/token/introspection': { cors: true },
+    '/token/revocation': { cors: true },
+    '/.well-known/**': { cors: true },
+  },
+
   runtimeConfig: {
     oidc: {
       baseUrl: 'http://localhost:3000',
