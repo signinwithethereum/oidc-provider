@@ -7,13 +7,7 @@ const action = computed(() => String(route.query.action || ''))
 
 <template>
   <main>
-    <Dialog
-      :open="true"
-      :closable="false"
-      :click-outside="false"
-      title="Sign Out"
-      compat
-    >
+    <CardPage title="Sign Out">
       <p class="muted">
         Do you want to sign out from this session?
       </p>
@@ -27,7 +21,7 @@ const action = computed(() => String(route.query.action || ''))
           No, stay signed in
         </Button>
       </form>
-    </Dialog>
+    </CardPage>
   </main>
 </template>
 

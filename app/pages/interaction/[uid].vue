@@ -9,12 +9,9 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
 
 <template>
   <main>
-    <Dialog
-      :open="!!error || !!data"
-      :closable="false"
-      :click-outside="false"
+    <CardPage
+      v-if="error || data"
       :title="error ? error.data?.message || 'Session Expired' : undefined"
-      compat
     >
       <template v-if="error">
         <p class="muted">
@@ -79,7 +76,7 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
           >
         </footer>
       </template>
-    </Dialog>
+    </CardPage>
   </main>
 </template>
 

@@ -27,13 +27,7 @@ const title = computed(() => {
 
 <template>
   <main>
-    <Dialog
-      :open="true"
-      :closable="false"
-      :click-outside="false"
-      :title="title"
-      compat
-    >
+    <CardPage :title="title">
       <p class="muted">
         {{ description }}
       </p>
@@ -41,7 +35,7 @@ const title = computed(() => {
       <p class="muted hint">
         Please close this window and try again from your application.
       </p>
-    </Dialog>
+    </CardPage>
   </main>
 </template>
 
