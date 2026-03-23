@@ -159,11 +159,17 @@ export async function getProvider(): Promise<Provider> {
 export async function seedDefaultClients(): Promise<void> {
   const { oidc } = useRuntimeConfig()
   let clients: Record<string, string>
-  try {
-    clients = JSON.parse(oidc.defaultClients || '{}')
-  } catch {
-    console.warn('Failed to parse NUXT_OIDC_DEFAULT_CLIENTS')
-    return
+  const raw = oidc.defaultClients
+  if (!raw) return
+  if (typeof raw === 'object') {
+    clients = raw as Record<string, string>
+  } else {
+    try {
+      clients = JSON.parse(raw)
+    } catch {
+      console.warn('Failed to parse NUXT_OIDC_DEFAULT_CLIENTS')
+      return
+    }
   }
 
   if (!Object.keys(clients).length) return
