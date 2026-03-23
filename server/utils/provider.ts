@@ -123,6 +123,14 @@ export async function getProvider(): Promise<Provider> {
       },
     },
 
+    renderError(ctx, out, _error) {
+      const params = new URLSearchParams({
+        error: String(out.error || 'server_error'),
+        error_description: String(out.error_description || 'An unexpected error occurred'),
+      })
+      ctx.redirect(`/error?${params}`)
+    },
+
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
     },
