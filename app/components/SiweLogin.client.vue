@@ -14,9 +14,10 @@ const emit = defineEmits<{
 
 const { step, statusText, errorMessage, signIn, reset } = useSiwe()
 
-const { address, chainId, isConnected, connector } = useConnection()
+const { address, isConnected } = useConnection()
 const { mutate: disconnectAccount } = useDisconnect()
 
+const isBusy = computed(() => ['reconnecting', 'signing', 'verifying', 'complete'].includes(step.value))
 const userInitiated = ref(false)
 const redirectTo = ref<string>()
 
@@ -72,7 +73,7 @@ watch([isConnected, address], ([connected, addr]) => {
 <template>
   <div class="siwe-login">
     <Loading
-      v-if="step === 'signing' || step === 'verifying' || step === 'complete'"
+      v-if="isBusy"
       spinner
       stacked
       :txt="step === 'complete' ? 'Redirecting…' : statusText"
@@ -99,6 +100,7 @@ watch([isConnected, address], ([connected, addr]) => {
         Sign in with Ethereum
       </Button>
       <Button
+        v-if="!isBusy"
         class="tertiary block"
         @click="disconnect()"
       >
@@ -110,7 +112,7 @@ watch([isConnected, address], ([connected, addr]) => {
     </template>
 
     <EvmConnect
-      v-else-if="step !== 'verifying'"
+      v-else-if="!isBusy"
       @connecting="userInitiated = true"
     />
   </div>
