@@ -113,8 +113,10 @@ export default defineEventHandler(async (event) => {
   const chainId = chainIdStr ? parseInt(chainIdStr, 10) : 1
   const accountId = `eip155:${chainId}:${checksumAddress}`
 
-  // Complete the interaction — provider writes the 302 response directly
-  await provider.interactionFinished(req, res, {
+  // Complete the interaction — return redirect URL for the client to navigate to
+  const redirectTo = await provider.interactionResult(req, res, {
     login: { accountId },
   })
+
+  return { redirectTo }
 })

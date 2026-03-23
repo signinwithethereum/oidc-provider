@@ -52,6 +52,7 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
         <SiweLogin
           :uid="uid"
           :client-id="data.params?.client_id"
+          :redirect-uri="data.params?.redirect_uri"
         />
 
         <footer

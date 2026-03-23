@@ -4,6 +4,7 @@ import { useSiwe } from '@1001-digital/components.evm'
 const props = defineProps<{
   uid: string
   clientId?: string
+  redirectUri?: string
 }>()
 
 const emit = defineEmits<{
@@ -26,6 +27,7 @@ async function handleSignIn() {
   const result = await signIn({
     getNonce: async () => props.uid,
     statement: 'Sign-In with Ethereum',
+    resources: props.redirectUri ? [props.redirectUri] : undefined,
     async verify(message, signature) {
       const response = await fetch(`/api/interaction/${props.uid}`, {
         method: 'POST',
@@ -33,17 +35,16 @@ async function handleSignIn() {
         body: JSON.stringify({ message, signature }),
       })
 
-      if (response.redirected) {
-        window.location.href = response.url
-        // Keep the composable in 'verifying' state while navigating
-        return
-      }
-
       if (!response.ok) {
         const error = await response
           .json()
           .catch(() => ({ statusMessage: 'Verification failed' }))
         throw new Error(error.statusMessage || 'Verification failed')
+      }
+
+      const data = await response.json()
+      if (data.redirectTo) {
+        window.location.href = data.redirectTo
       }
     },
   })
