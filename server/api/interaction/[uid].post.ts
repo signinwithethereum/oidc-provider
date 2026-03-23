@@ -41,10 +41,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Extract fields from the raw SIWE message
-  // We parse manually because oidc-provider interaction uids contain
-  // non-alphanumeric chars (-, _) which viem's parseSiweMessage rejects
-  // per strict EIP-4361 nonce validation.
+  // We parse SIWE fields manually instead of using viem's parseSiweMessage
+  // because oidc-provider generates interaction UIDs with dashes and
+  // underscores. EIP-4361 defines nonce as alpha-numeric only, so viem's
+  // parser rejects these UIDs. The signature itself is still verified via
+  // viem's verifySiweMessage which doesn't enforce the nonce charset.
   const nonce = siweField(message, 'Nonce')
   const address = siweAddress(message)
   const chainIdStr = siweField(message, 'Chain ID')
