@@ -18,6 +18,7 @@ const { address, chainId, isConnected, connector } = useConnection()
 const { mutate: disconnectAccount } = useDisconnect()
 
 const userInitiated = ref(false)
+const redirectTo = ref<string>()
 
 function disconnect() {
   reset()
@@ -25,6 +26,8 @@ function disconnect() {
 }
 
 async function handleSignIn() {
+  redirectTo.value = undefined
+
   const result = await signIn({
     getNonce: async () => props.nonce,
     statement: 'Sign-In with Ethereum',
@@ -44,14 +47,17 @@ async function handleSignIn() {
       }
 
       const data = await response.json()
-      if (data.redirectTo) {
-        window.location.href = data.redirectTo
-      }
+      redirectTo.value = data.redirectTo
     },
   })
 
   if (!result) {
     emit('error', errorMessage.value)
+    return
+  }
+
+  if (redirectTo.value) {
+    await navigateTo(redirectTo.value, { external: true })
   }
 }
 
@@ -66,10 +72,10 @@ watch([isConnected, address], ([connected, addr]) => {
 <template>
   <div class="siwe-login">
     <Loading
-      v-if="step === 'signing' || step === 'verifying'"
+      v-if="step === 'signing' || step === 'verifying' || step === 'complete'"
       spinner
       stacked
-      :txt="statusText"
+      :txt="step === 'complete' ? 'Redirecting…' : statusText"
     />
 
     <template v-else-if="isConnected && step === 'error'">
