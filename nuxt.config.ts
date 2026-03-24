@@ -25,6 +25,9 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    session: {
+      password: '',
+    },
     oidc: {
       baseUrl: 'http://localhost:3000',
       redisUrl: 'redis://localhost:6379',
