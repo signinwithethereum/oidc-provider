@@ -1,5 +1,9 @@
 import { getProvider } from '../../utils/provider'
-import { SiweMessage, createViemConfig } from '@signinwithethereum/siwe'
+import {
+  SiweMessage,
+  SiweError,
+  createViemConfig,
+} from '@signinwithethereum/siwe'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 
@@ -37,17 +41,9 @@ export default defineEventHandler(async (event) => {
   try {
     siweMessage = new SiweMessage(message)
   } catch {
-    // Distinguish missing vs malformed address by inspecting the raw line
-    const rawAddress = message.split('\n')[1]?.trim()
-    if (!rawAddress) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'SIWE message missing address',
-      })
-    }
     throw createError({
       statusCode: 400,
-      statusMessage: 'SIWE message contains invalid Ethereum address',
+      statusMessage: 'Invalid SIWE message',
     })
   }
 
@@ -77,7 +73,8 @@ export default defineEventHandler(async (event) => {
   }
 
   // Verify signature + domain binding — supports EOA, EIP-1271 (contract
-  // wallets like Safe), and EIP-6492 (pre-deployed ERC-4337 accounts)
+  // wallets like Safe), and EIP-6492 (pre-deployed ERC-4337 accounts).
+  // verify() throws SiweError directly (4.1.0+) on failure.
   const { oidc } = useRuntimeConfig()
   const publicClient = createPublicClient({
     chain: mainnet,
@@ -85,30 +82,30 @@ export default defineEventHandler(async (event) => {
   })
   const config = await createViemConfig({ publicClient })
 
-  const { success, data, error } = await siweMessage.verify(
-    {
-      signature,
-      domain: new URL(oidc.baseUrl).host,
-      nonce: siweMessage.nonce,
-    },
-    { config, suppressExceptions: true },
-  )
-
-  if (!success) {
-    const statusMessage =
-      error instanceof Error ? error.message : (error?.type ?? 'Invalid SIWE signature')
-    throw createError({ statusCode: 400, statusMessage })
+  let accountId: string
+  try {
+    const { data } = await siweMessage.verify(
+      {
+        signature,
+        domain: new URL(oidc.baseUrl).host,
+        nonce: siweMessage.nonce,
+      },
+      { config },
+    )
+    accountId = `eip155:${data.chainId}:${config.getAddress(data.address)}`
+  } catch (e) {
+    if (e instanceof SiweError) {
+      throw createError({ statusCode: 400, statusMessage: e.message })
+    }
+    throw e
   }
 
-  // Build account ID: eip155:{chainId}:{checksumAddress}
-  const accountId = `eip155:${data.chainId}:${config.getAddress(data.address)}`
-
   // Complete the interaction — provider stores the result and returns the
-  // redirect URL. We redirect via h3 because interactionResult doesn't
-  // write the redirect when the response is wrapped by Nitro/h3.
+  // redirect URL as JSON so the client can navigate via full page load,
+  // avoiding cross-origin fetch redirect CORS issues.
   const redirectTo = await provider.interactionResult(req, res, {
     login: { accountId },
   })
 
-  return sendRedirect(event, redirectTo, 303)
+  return { redirectTo }
 })

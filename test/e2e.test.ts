@@ -146,7 +146,8 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
     })
 
     let updatedCookies = mergeCookies(cookies, extractCookies(verifyRes))
-    let location = verifyRes.headers.get('location')!
+    const verifyBody = (await verifyRes.json()) as { redirectTo: string }
+    let location = verifyBody.redirectTo
 
     for (let i = 0; i < 5; i++) {
       if (location.startsWith('https://example.com')) break
@@ -294,11 +295,12 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       expect(
         verifyRes.status,
         `verify failed: ${await verifyRes.clone().text()}`,
-      ).toSatisfy((s: number) => [302, 303].includes(s))
+      ).toBe(200)
 
       // 6. Follow redirect chain until we reach the client callback
       cookies = mergeCookies(cookies, extractCookies(verifyRes))
-      let location = verifyRes.headers.get('location')!
+      const verifyBody = (await verifyRes.json()) as { redirectTo: string }
+      let location = verifyBody.redirectTo
 
       for (let i = 0; i < 5; i++) {
         if (location.startsWith('https://example.com')) break
@@ -601,7 +603,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       })
       expect(res.status).toBe(400)
       const body = await res.json()
-      expect(body.statusMessage).toMatch(/SIWE message missing address/)
+      expect(body.statusMessage).toMatch(/Invalid SIWE message/)
     })
 
     it('rejects SIWE message with malformed address', async () => {
@@ -626,7 +628,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       })
       expect(res.status).toBe(400)
       const body = await res.json()
-      expect(body.statusMessage).toMatch(/invalid Ethereum address/)
+      expect(body.statusMessage).toMatch(/Invalid SIWE message/)
     })
 
     it('rejects SIWE message with mismatched domain', async () => {
