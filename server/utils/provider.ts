@@ -28,13 +28,14 @@ async function buildJWKS(rsaPem: string, redisUrl: string) {
     return { keys: [jwk] }
   }
 
-  // Auto-generate RSA key, shared across workers via Redis
+  // Auto-generate RSA key, shared across workers via Redis.
+  // Uses SET NX to avoid a race where concurrent workers each
+  // generate a key and the last write silently wins.
   const redis = new Redis(redisUrl)
   try {
     const existing = await redis.get(JWKS_REDIS_KEY)
     if (existing) {
       const jwk = JSON.parse(existing)
-      // Verify the stored key is still usable
       await importJWK(jwk, 'RS256')
       return { keys: [jwk] }
     }
@@ -42,8 +43,18 @@ async function buildJWKS(rsaPem: string, redisUrl: string) {
     const { privateKey } = await generateKeyPair('RS256', { extractable: true })
     const jwk = await exportJWK(privateKey)
     decorateJWK(jwk)
-    await redis.set(JWKS_REDIS_KEY, JSON.stringify(jwk))
-    return { keys: [jwk] }
+
+    // Atomically set only if no key exists yet — loses the race gracefully.
+    const written = await redis.set(JWKS_REDIS_KEY, JSON.stringify(jwk), 'NX')
+    if (written) {
+      return { keys: [jwk] }
+    }
+
+    // Another worker won — use their key.
+    const winner = await redis.get(JWKS_REDIS_KEY)
+    const winnerJwk = JSON.parse(winner!)
+    await importJWK(winnerJwk, 'RS256')
+    return { keys: [winnerJwk] }
   } finally {
     redis.disconnect()
   }
