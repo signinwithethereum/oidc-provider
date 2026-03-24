@@ -1,6 +1,6 @@
 {
   "name": "@signinwithethereum/oidc-provider",
-  "private": true,
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.30.0",
   "scripts": {
