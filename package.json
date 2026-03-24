@@ -24,9 +24,11 @@
   "devDependencies": {
     "@types/luxon": "^3.7.1",
     "@types/oidc-provider": "^9.5.0",
+    "@vue/language-core": "^3.2.6",
     "nuxt": "^4.3.1",
     "prettier": "^3.8.1",
     "typescript": "^5.8.3",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "vue-tsc": "^3.2.6"
   }
 }
