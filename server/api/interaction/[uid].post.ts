@@ -4,8 +4,6 @@ import {
   SiweError,
   createViemConfig,
 } from '@signinwithethereum/siwe'
-import { createPublicClient, http } from 'viem'
-import { mainnet } from 'viem/chains'
 
 export default defineEventHandler(async (event) => {
   const provider = await getProvider()
@@ -47,9 +45,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Decode the hex nonce back to the interaction UID and compare
-  const decodedNonce = Buffer.from(siweMessage.nonce, 'hex').toString()
-  if (decodedNonce !== details.uid) {
+  // Buffer.from(…, 'hex') silently drops non-hex chars and odd trailing
+  // nibbles, so validate format before decoding the nonce.
+  const nonce = siweMessage.nonce
+  if (
+    nonce.length % 2 !== 0 ||
+    !/^[0-9a-f]+$/i.test(nonce) ||
+    Buffer.from(nonce, 'hex').toString() !== details.uid
+  ) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Nonce mismatch',
@@ -75,11 +78,10 @@ export default defineEventHandler(async (event) => {
   // Verify signature + domain binding — supports EOA, EIP-1271 (contract
   // wallets like Safe), and EIP-6492 (pre-deployed ERC-4337 accounts).
   // verify() throws SiweError directly (4.1.0+) on failure.
+  // The publicClient must target the SIWE message's chain so that EIP-1271
+  // contract wallet signatures are verified on the correct network.
   const { oidc } = useRuntimeConfig()
-  const publicClient = createPublicClient({
-    chain: mainnet,
-    transport: http(oidc.ethProvider || undefined),
-  })
+  const publicClient = createChainClient(oidc.ethProvider, siweMessage.chainId)
   const config = await createViemConfig({ publicClient })
 
   let accountId: string
@@ -89,8 +91,10 @@ export default defineEventHandler(async (event) => {
         signature,
         domain: new URL(oidc.baseUrl).host,
         nonce: siweMessage.nonce,
+        chainId: siweMessage.chainId,
+        uri: siweMessage.uri,
       },
-      { config },
+      { config, strict: true },
     )
     accountId = `eip155:${data.chainId}:${config.getAddress(data.address)}`
   } catch (e) {
