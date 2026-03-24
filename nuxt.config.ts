@@ -29,7 +29,7 @@ export default defineNuxtConfig({
       baseUrl: 'http://localhost:3000',
       redisUrl: 'redis://localhost:6379',
       rsaPem: '',
-      requireSecret: false,
+      requireSecret: true,
       ethProvider: '',
       defaultClients: '{}',
       cookieKeys: '',
