@@ -1,6 +1,6 @@
 import { getProvider } from '../../utils/provider'
-import { getAddress, isAddress, createPublicClient, http } from 'viem'
-import { parseSiweMessage } from 'viem/siwe'
+import { SiweMessage, createViemConfig } from '@signinwithethereum/siwe'
+import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 
 export default defineEventHandler(async (event) => {
@@ -30,20 +30,21 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Parse the SIWE message with viem. The nonce is the hex-encoded
-  // interaction UID — oidc-provider UIDs contain dashes/underscores which
-  // violate EIP-4361's alphanumeric-only nonce rule, so we hex-encode to
-  // stay spec-compliant.
-  const parsed = parseSiweMessage(message)
-
-  if (!parsed.address) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'SIWE message missing address',
-    })
-  }
-
-  if (!isAddress(parsed.address)) {
+  // ABNF-strict parse — the nonce is the hex-encoded interaction UID.
+  // oidc-provider UIDs contain dashes/underscores which violate EIP-4361's
+  // alphanumeric-only nonce rule, so we hex-encode to stay spec-compliant.
+  let siweMessage: SiweMessage
+  try {
+    siweMessage = new SiweMessage(message)
+  } catch {
+    // Distinguish missing vs malformed address by inspecting the raw line
+    const rawAddress = message.split('\n')[1]?.trim()
+    if (!rawAddress) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'SIWE message missing address',
+      })
+    }
     throw createError({
       statusCode: 400,
       statusMessage: 'SIWE message contains invalid Ethereum address',
@@ -51,7 +52,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Decode the hex nonce back to the interaction UID and compare
-  const decodedNonce = Buffer.from(parsed.nonce ?? '', 'hex').toString()
+  const decodedNonce = Buffer.from(siweMessage.nonce, 'hex').toString()
   if (decodedNonce !== details.uid) {
     throw createError({
       statusCode: 400,
@@ -61,7 +62,7 @@ export default defineEventHandler(async (event) => {
 
   // Validate the first Resources entry matches the OIDC redirect_uri
   const redirectUri = details.params.redirect_uri as string | undefined
-  const firstResource = parsed.resources?.[0]
+  const firstResource = siweMessage.resources?.[0]
   if (!firstResource) {
     throw createError({
       statusCode: 400,
@@ -75,35 +76,39 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify the SIWE signature + domain binding against the provider's issuer
+  // Verify signature + domain binding — supports EOA, EIP-1271 (contract
+  // wallets like Safe), and EIP-6492 (pre-deployed ERC-4337 accounts)
   const { oidc } = useRuntimeConfig()
-  const client = createPublicClient({
+  const publicClient = createPublicClient({
     chain: mainnet,
     transport: http(oidc.ethProvider || undefined),
   })
+  const config = await createViemConfig({ publicClient })
 
-  const valid = await client.verifySiweMessage({
-    message,
-    signature,
-    domain: new URL(oidc.baseUrl).host,
-  })
+  const { success, data, error } = await siweMessage.verify(
+    {
+      signature,
+      domain: new URL(oidc.baseUrl).host,
+      nonce: siweMessage.nonce,
+    },
+    { config, suppressExceptions: true },
+  )
 
-  if (!valid) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid SIWE signature',
-    })
+  if (!success) {
+    const statusMessage =
+      error instanceof Error ? error.message : (error?.type ?? 'Invalid SIWE signature')
+    throw createError({ statusCode: 400, statusMessage })
   }
 
   // Build account ID: eip155:{chainId}:{checksumAddress}
-  const checksumAddress = getAddress(parsed.address)
-  const chainId = parsed.chainId ?? 1
-  const accountId = `eip155:${chainId}:${checksumAddress}`
+  const accountId = `eip155:${data.chainId}:${config.getAddress(data.address)}`
 
-  // Complete the interaction — return redirect URL for the client to navigate to
+  // Complete the interaction — provider stores the result and returns the
+  // redirect URL. We redirect via h3 because interactionResult doesn't
+  // write the redirect when the response is wrapped by Nitro/h3.
   const redirectTo = await provider.interactionResult(req, res, {
     login: { accountId },
   })
 
-  return { redirectTo }
+  return sendRedirect(event, redirectTo, 303)
 })
