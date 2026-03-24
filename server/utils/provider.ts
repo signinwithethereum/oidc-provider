@@ -95,13 +95,18 @@ export async function getProvider(): Promise<Provider> {
       short: { path: '/' },
     },
 
-    // Auto-approve grants — SIWE signature IS the user's consent
+    // Auto-approve grants — SIWE signature IS the user's consent.
+    // Only grant scopes we actually support (openid, profile).
     async loadExistingGrant(ctx) {
+      const SUPPORTED_SCOPES = new Set(['openid', 'profile'])
+      const requested = (ctx.oidc.params!.scope as string || '').split(' ').filter(Boolean)
+      const granted = requested.filter((s) => SUPPORTED_SCOPES.has(s)).join(' ')
+
       const grant = new ctx.oidc.provider.Grant({
         clientId: ctx.oidc.client!.clientId,
         accountId: ctx.oidc.session!.accountId,
       })
-      grant.addOIDCScope(ctx.oidc.params!.scope as string)
+      grant.addOIDCScope(granted)
       await grant.save()
       return grant
     },
