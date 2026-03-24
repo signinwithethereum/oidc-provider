@@ -1,6 +1,6 @@
 # SIWE OIDC Provider
 
-An OpenID Connect identity provider that authenticates users with their Ethereum wallets via [Sign-In with Ethereum](https://login.xyz) (EIP-4361).
+An OpenID Connect identity provider that authenticates users with their Ethereum wallets via [Sign-In with Ethereum](https://siwe.xyz) (EIP-4361).
 
 Any application that supports OIDC can use this provider to let users log in with their Ethereum address — no passwords, no email, no custodial accounts.
 
