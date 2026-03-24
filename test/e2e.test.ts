@@ -512,9 +512,9 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
 
   describe('token exchange edge cases', () => {
     it('rejects a replayed authorization code', async () => {
-      const { code, clientId } = await completeAuthFlow()
+      const { code, clientId, codeVerifier } = await completeAuthFlow()
 
-      // Code was already exchanged — reuse should fail
+      // Code was already exchanged — reuse with correct verifier should fail
       const tokenRes = await fetch(apiUrl('/token'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -523,12 +523,12 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
           code,
           redirect_uri: 'https://example.com/callback',
           client_id: clientId,
+          code_verifier: codeVerifier,
         }),
       })
-      expect(tokenRes.status).toBeGreaterThanOrEqual(400)
-      expect(tokenRes.status).toBeLessThan(500)
+      expect(tokenRes.status).toBe(400)
       const body = await tokenRes.json()
-      expect(body.error).toMatch(/invalid/)
+      expect(body.error).toBe('invalid_grant')
     })
 
     it('rejects a fabricated authorization code', async () => {
