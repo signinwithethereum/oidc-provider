@@ -1,4 +1,4 @@
-name: AI On-Demand Assistant  
+name: AI On-Demand Assistant
 on:
   issue_comment:
     types: [created]
@@ -19,8 +19,8 @@ jobs:
   ai-response:
     uses: signinwithethereum/workflow-automation/.github/workflows/issue-response.yml@v1.0.0
     with:
-      config-profile: "backend"
-      bot-mention: "@siwe-dev-ops"
+      config-profile: 'backend'
+      bot-mention: '@siwe-dev-ops'
       enable-auto-labeling: true
       enable-escalation: true
     secrets:

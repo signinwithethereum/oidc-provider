@@ -1,0 +1,32 @@
+{
+  "name": "@signinwithethereum/oidc-provider",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.30.0",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@1001-digital/layers.evm": "^2.5.0",
+    "@signinwithethereum/siwe": "4.1.0",
+    "ioredis": "^5.6.1",
+    "jose": "^6.0.11",
+    "oidc-provider": "^9.1.1",
+    "viem": "~2.47.1"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.1",
+    "@types/oidc-provider": "^9.5.0",
+    "nuxt": "^4.3.1",
+    "prettier": "^3.8.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.0"
+  }
+}
