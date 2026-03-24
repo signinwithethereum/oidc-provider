@@ -113,6 +113,10 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
   margin-block-start: var(--spacer);
   text-align: center;
   font-size: 0.8em;
-  opacity: 0.7;
+  color: var(--muted);
+
+  a {
+    color: inherit;
+  }
 }
 </style>
