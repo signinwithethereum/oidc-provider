@@ -42,6 +42,28 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
             }}</strong>
             is requesting access via Sign In With Ethereum
           </p>
+          <p
+            v-if="data.client?.policy_uri || data.client?.tos_uri"
+            class="legal-links"
+          >
+            <a
+              v-if="data.client.policy_uri"
+              :href="data.client.policy_uri"
+              target="_blank"
+              rel="noopener"
+              >Privacy Policy</a
+            >
+            <span v-if="data.client.policy_uri && data.client.tos_uri">
+              &middot;
+            </span>
+            <a
+              v-if="data.client.tos_uri"
+              :href="data.client.tos_uri"
+              target="_blank"
+              rel="noopener"
+              >Terms of Service</a
+            >
+          </p>
         </div>
 
         <hr />
@@ -52,29 +74,6 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
           :client-id="data.params?.client_id"
           :redirect-uri="data.params?.redirect_uri"
         />
-
-        <footer
-          v-if="data.client?.policy_uri || data.client?.tos_uri"
-          class="legal-links"
-        >
-          <a
-            v-if="data.client.policy_uri"
-            :href="data.client.policy_uri"
-            target="_blank"
-            rel="noopener"
-            >Privacy Policy</a
-          >
-          <span v-if="data.client.policy_uri && data.client.tos_uri">
-            &middot;
-          </span>
-          <a
-            v-if="data.client.tos_uri"
-            :href="data.client.tos_uri"
-            target="_blank"
-            rel="noopener"
-            >Terms of Service</a
-          >
-        </footer>
       </template>
     </CardPage>
   </main>
@@ -103,20 +102,19 @@ const { data, error } = await useFetch(`/api/interaction/${uid}`, {
     text-wrap: balance;
   }
 
+  .legal-links {
+    font-size: 0.8em;
+    color: var(--muted);
+
+    a {
+      color: inherit;
+    }
+  }
+
   + hr {
     width: 9rem;
     margin-inline: auto;
-  }
-}
-
-.legal-links {
-  margin-block-start: var(--spacer);
-  text-align: center;
-  font-size: 0.8em;
-  color: var(--muted);
-
-  a {
-    color: inherit;
+    margin-block: var(--spacer);
   }
 }
 </style>
