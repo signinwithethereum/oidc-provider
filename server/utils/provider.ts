@@ -85,7 +85,7 @@ export async function getProvider(): Promise<Provider> {
   const jwks = await buildJWKS(oidc.rsaPem, oidc.redisUrl)
   const cookieKeys = parseCookieKeys(oidc.cookieKeys)
 
-  provider = new Provider(oidc.baseUrl, {
+  const p = new Provider(oidc.baseUrl, {
     adapter: RedisAdapter,
     findAccount,
     jwks,
@@ -185,6 +185,9 @@ export async function getProvider(): Promise<Provider> {
         : 'none',
     },
   })
+
+  p.proxy = true
+  provider = p
 
   return provider
 }
