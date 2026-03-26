@@ -1,5 +1,6 @@
 {
   "name": "@signinwithethereum/oidc-provider",
+  "version": "0.0.0",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.30.0",
@@ -11,7 +12,8 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "changeset": "changeset"
   },
   "dependencies": {
     "@1001-digital/layers.evm": "^2.5.0",
@@ -22,6 +24,8 @@
     "viem": "~2.47.1"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.29.4",
     "@types/luxon": "^3.7.1",
     "@types/oidc-provider": "^9.5.0",
     "@vue/language-core": "^3.2.6",
