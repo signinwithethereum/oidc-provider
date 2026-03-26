@@ -92,7 +92,7 @@ function mergeCookies(...parts: string[]): string {
 
 describe.skipIf(!serverAvailable)('siwe-oidc', () => {
   /** Register a client, start an auth flow, and return the uid + cookies + clientId + PKCE verifier. */
-  async function startInteraction() {
+  async function startInteraction(scope = 'openid profile') {
     const client = await fetch(apiUrl('/reg'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -107,7 +107,7 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
     authUrl.searchParams.set('client_id', client.client_id)
     authUrl.searchParams.set('redirect_uri', 'https://example.com/callback')
     authUrl.searchParams.set('response_type', 'code')
-    authUrl.searchParams.set('scope', 'openid profile')
+    authUrl.searchParams.set('scope', scope)
     authUrl.searchParams.set('code_challenge', pkce.challenge)
     authUrl.searchParams.set('code_challenge_method', 'S256')
 
@@ -124,8 +124,8 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
   }
 
   /** Run the full SIWE auth flow and return tokens + the authorization code. */
-  async function completeAuthFlow() {
-    const { uid, cookies, clientId, codeVerifier } = await startInteraction()
+  async function completeAuthFlow(scope = 'openid profile') {
+    const { uid, cookies, clientId, codeVerifier } = await startInteraction(scope)
 
     const message = createSiweMessage({
       domain: new URL(BASE).host,
@@ -195,6 +195,9 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       expect(config).toHaveProperty('registration_endpoint')
       expect(config).toHaveProperty('userinfo_endpoint')
       expect(config.scopes_supported).toContain('openid')
+      expect(config.scopes_supported).toContain('siwe')
+      expect(config.claims_supported).toContain('siwe_message')
+      expect(config.claims_supported).toContain('siwe_signature')
       expect(config.response_types_supported).toContain('code')
     })
 
@@ -700,6 +703,39 @@ describe.skipIf(!serverAvailable)('siwe-oidc', () => {
       expect(res.status).toBe(400)
       const body = await res.json()
       expect(body.statusMessage).toMatch(/resource does not match redirect_uri/)
+    })
+  })
+
+  describe('siwe proof claims', () => {
+    it('includes siwe_message and siwe_signature when siwe scope is requested', async () => {
+      const { idToken, clientId } = await completeAuthFlow('openid profile siwe')
+
+      const jwksData = await fetch(apiUrl('/jwks')).then((r) => r.json())
+      const pubKey = await importJWK(jwksData.keys[0], 'RS256')
+      const { payload: claims } = await jwtVerify(idToken, pubKey, {
+        issuer: BASE,
+        audience: clientId,
+      })
+
+      expect(claims).toHaveProperty('siwe_message')
+      expect(claims).toHaveProperty('siwe_signature')
+      expect(claims.siwe_message).toContain('wants you to sign in with your Ethereum account')
+      expect(typeof claims.siwe_signature).toBe('string')
+      expect((claims.siwe_signature as string).startsWith('0x')).toBe(true)
+    })
+
+    it('excludes siwe claims when siwe scope is not requested', async () => {
+      const { idToken, clientId } = await completeAuthFlow('openid profile')
+
+      const jwksData = await fetch(apiUrl('/jwks')).then((r) => r.json())
+      const pubKey = await importJWK(jwksData.keys[0], 'RS256')
+      const { payload: claims } = await jwtVerify(idToken, pubKey, {
+        issuer: BASE,
+        audience: clientId,
+      })
+
+      expect(claims).not.toHaveProperty('siwe_message')
+      expect(claims).not.toHaveProperty('siwe_signature')
     })
   })
 })

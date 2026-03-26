@@ -2,6 +2,7 @@ import type { Account, FindAccount } from 'oidc-provider'
 import type { Address } from 'viem'
 import { getAddress } from 'viem'
 import { resolveEnsName, resolveEnsAvatar } from './ens'
+import { loadSiweProof } from './siwe-store'
 
 /**
  * Account ID format: eip155:{chainId}:{checksumAddress}
@@ -21,10 +22,14 @@ export function parseAccountId(accountId: string): {
   }
 }
 
-export const findAccount: FindAccount = async (_ctx, id): Promise<Account> => {
+export const findAccount: FindAccount = async (_ctx, id, token): Promise<Account> => {
   const { address } = parseAccountId(id)
   const { oidc } = useRuntimeConfig()
   const ethProvider = oidc.ethProvider || undefined
+
+  // Load SIWE proof from Redis if a token with grantId is available
+  const grantId = token && 'grantId' in token ? (token as { grantId?: string }).grantId : undefined
+  const siweProof = grantId ? await loadSiweProof(grantId) : null
 
   return {
     accountId: id,
@@ -38,6 +43,10 @@ export const findAccount: FindAccount = async (_ctx, id): Promise<Account> => {
         sub: id,
         preferred_username: ensName || address,
         picture: avatar || undefined,
+        ...(siweProof && {
+          siwe_message: siweProof.message,
+          siwe_signature: siweProof.signature,
+        }),
       }
     },
   }

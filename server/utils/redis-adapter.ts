@@ -5,7 +5,7 @@ const PREFIX = 'oidc:'
 
 let client: Redis | undefined
 
-function getClient(): Redis {
+export function getClient(): Redis {
   if (!client) {
     const { oidc } = useRuntimeConfig()
     client = new Redis(oidc.redisUrl)

@@ -9,6 +9,7 @@ import {
 import Redis from 'ioredis'
 import { RedisAdapter } from './redis-adapter'
 import { findAccount } from './find-account'
+import { storeSiweProof } from './siwe-store'
 
 let provider: Provider | undefined
 
@@ -95,10 +96,12 @@ export async function getProvider(): Promise<Provider> {
       short: { path: '/' },
     },
 
+    conformIdTokenClaims: false,
+
     // Auto-approve grants — SIWE signature IS the user's consent.
-    // Only grant scopes we actually support (openid, profile).
+    // Only grant scopes we actually support (openid, profile, siwe).
     async loadExistingGrant(ctx) {
-      const SUPPORTED_SCOPES = new Set(['openid', 'profile'])
+      const SUPPORTED_SCOPES = new Set(['openid', 'profile', 'siwe'])
       const requested = (ctx.oidc.params!.scope as string || '').split(' ').filter(Boolean)
       const granted = requested.filter((s) => SUPPORTED_SCOPES.has(s)).join(' ')
 
@@ -108,12 +111,22 @@ export async function getProvider(): Promise<Provider> {
       })
       grant.addOIDCScope(granted)
       await grant.save()
+
+      // Persist SIWE proof for inclusion in id_token claims
+      const siweData = (ctx.oidc.result as Record<string, unknown>)?.siwe as
+        | { message: string; signature: string }
+        | undefined
+      if (siweData && granted.includes('siwe')) {
+        await storeSiweProof(grant.jti, siweData)
+      }
+
       return grant
     },
 
     claims: {
       openid: ['sub'],
       profile: ['preferred_username', 'picture'],
+      siwe: ['siwe_message', 'siwe_signature'],
     },
 
     features: {

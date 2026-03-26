@@ -109,6 +109,7 @@ export default defineEventHandler(async (event) => {
   // avoiding cross-origin fetch redirect CORS issues.
   const redirectTo = await provider.interactionResult(req, res, {
     login: { accountId },
+    siwe: { message, signature },
   })
 
   return { redirectTo }
