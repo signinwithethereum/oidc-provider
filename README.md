@@ -77,7 +77,7 @@ All configuration is via environment variables (see `.env.example`):
 | `NUXT_OIDC_REDIS_URL`                       | Redis connection URL                     | `redis://localhost:6379` |
 | `NUXT_OIDC_COOKIE_KEYS`                     | Cookie signing keys (comma-separated)    | _required_               |
 | `NUXT_OIDC_RSA_PEM`                         | RSA private key in PEM format            | auto-generated           |
-| `NUXT_OIDC_REQUIRE_SECRET`                  | Require client secret for token exchange | `false`                  |
+| `NUXT_OIDC_REQUIRE_SECRET`                  | Require client secret for token exchange | `true`                   |
 | `NUXT_OIDC_ETH_PROVIDER`                    | Ethereum RPC URL for ENS resolution      | public default           |
 | `NUXT_OIDC_DEFAULT_CLIENTS`                 | Pre-configured clients (JSON)            | `{}`                     |
 | `NUXT_PUBLIC_EVM_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID                 | —                        |
