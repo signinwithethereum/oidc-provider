@@ -199,6 +199,8 @@ export async function getProvider(): Promise<Provider> {
     },
   })
 
+  provider.proxy = true
+
   return provider
 }
 
