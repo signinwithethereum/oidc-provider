@@ -14,7 +14,7 @@
               href="https://siwe.xyz"
               target="_blank"
               rel="noopener"
-              >Sign-In with Ethereum</a
+              >Sign in with Ethereum</a
             >.
           </p>
           <p class="muted">
@@ -59,7 +59,7 @@
         <div class="hero-graphic">
           <img
             src="/siwe.svg"
-            alt="Sign-In with Ethereum"
+            alt="Sign in with Ethereum"
           />
         </div>
       </div>

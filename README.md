@@ -1,6 +1,6 @@
 # SIWE OIDC Provider
 
-An OpenID Connect identity provider that authenticates users with their Ethereum wallets via [Sign-In with Ethereum](https://siwe.xyz) (EIP-4361).
+An OpenID Connect identity provider that authenticates users with their Ethereum wallets via [Sign in with Ethereum](https://siwe.xyz) (EIP-4361).
 
 Any application that supports OIDC can use this provider to let users log in with their Ethereum address — no passwords, no email, no custodial accounts.
 
@@ -139,7 +139,7 @@ pnpm build        # Production build
 ## Tech stack
 
 - [oidc-provider](https://github.com/panva/node-oidc-provider) — certified OIDC implementation
-- [siwe](https://github.com/signinwithethereum/siwe) — Sign-In with Ethereum
+- [siwe](https://github.com/signinwithethereum/siwe) — Sign in with Ethereum
 - [viem](https://viem.sh) — Ethereum client
 - [ioredis](https://github.com/redis/ioredis) — Redis client
 - [jose](https://github.com/panva/jose) — JWT/JWK operations

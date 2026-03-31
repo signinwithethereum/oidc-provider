@@ -29,7 +29,7 @@ async function handleSignIn() {
 
   const result = await signIn({
     getNonce: async () => props.nonce,
-    statement: 'Sign-In with Ethereum',
+    statement: 'Sign in with Ethereum',
     resources: props.redirectUri ? [props.redirectUri] : undefined,
     async verify(message: string, signature: string) {
       const response = await fetch(`/api/interaction/${props.uid}`, {
