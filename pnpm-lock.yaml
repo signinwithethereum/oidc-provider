@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@1001-digital/layers.evm':
-        specifier: ^2.6.0
-        version: 2.6.0(b4bc2c1688394f982dcc40b24da40161)
+        specifier: ^2.6.1
+        version: 2.6.1(b4bc2c1688394f982dcc40b24da40161)
       '@signinwithethereum/siwe':
         specifier: 4.1.0
         version: 4.1.0(viem@2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))
@@ -82,8 +82,8 @@ packages:
   '@1001-digital/layers.base@2.0.17':
     resolution: {integrity: sha512-Oa11MVk3SMA4IAKpU0uyJUPbQEkkoiRvRpls6ATRT7F1iTcYK3bJ+PFwXyIcEZ3UMKQt96CVMgOjNhiBOuViAg==}
 
-  '@1001-digital/layers.evm@2.6.0':
-    resolution: {integrity: sha512-Roeg27DgV1YHTYDKvbsEld0KyMGAi+LLi/TkkR+tipwL8e4rLiNm47fae89BO0LNTYIEe7Dtps4KENGJ5tf5nA==}
+  '@1001-digital/layers.evm@2.6.1':
+    resolution: {integrity: sha512-Z27st5XlMvinYUE8MH77K+JafDlQF1HGem/hVtx+Jq/Dx+PeW5/XvqLhxo6OzyPlcBNG3NVG2rpWYS/pU1un2Q==}
 
   '@1001-digital/styles@2.3.3':
     resolution: {integrity: sha512-S0yXhhPuUz4rdRZ0lXmfpUFwiUAJcFKwcimN5etUd+YQrgy+Ve7w3DR1/Yr7N6j37tlWuR26Y8wa8XSKNC+TNA==}
@@ -7889,7 +7889,7 @@ snapshots:
       - vite
       - vue
 
-  '@1001-digital/layers.evm@2.6.0(b4bc2c1688394f982dcc40b24da40161)':
+  '@1001-digital/layers.evm@2.6.1(b4bc2c1688394f982dcc40b24da40161)':
     dependencies:
       '@1001-digital/components': 2.4.5(@1001-digital/styles@2.3.3)(vue@3.5.30(typescript@5.9.3))
       '@1001-digital/components.evm': 2.7.0(@1001-digital/components@2.4.5(@1001-digital/styles@2.3.3)(vue@3.5.30(typescript@5.9.3)))(@vueuse/core@14.2.1(vue@3.5.30(typescript@5.9.3)))(@wagmi/core@3.4.1(@tanstack/query-core@5.95.2)(@types/react@19.2.14)(immer@9.0.21)(ox@0.14.7(typescript@5.9.3)(zod@3.25.76))(react@19.2.4)(typescript@5.9.3)(viem@2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)))(@wagmi/vue@0.5.1(133b4ba6eb036f84320f0bf1513bbbac))(bufferutil@4.1.0)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.4)(utf-8-validate@6.0.6))(utf-8-validate@6.0.6)(viem@2.47.6(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))(vue@3.5.30(typescript@5.9.3))
